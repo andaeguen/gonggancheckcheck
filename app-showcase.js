@@ -145,7 +145,7 @@ function switchDashboardTab(tab) {
     document.querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');
     document.getElementById(tab + '-tab').style.display = 'block';
 
-    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.workspace-nav button').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 }
 
@@ -184,19 +184,113 @@ function initWorkspace(){
 }
 window.addEventListener('load',initWorkspace);
 
-(function(){
- const originalShowPage = window.showPage;
- if(typeof originalShowPage === 'function'){
-   window.showPage = function(pageName){
-     originalShowPage(pageName);
-     if(pageName === 'dashboard') setTimeout(()=>{ if(typeof window.updateDashboard==='function') window.updateDashboard(); if(typeof window.initWorkspace==='function') window.initWorkspace(); }, 0);
-   };
- }
- const originalUpdateDashboard = window.updateDashboard;
- if(typeof originalUpdateDashboard === 'function'){
-   window.updateDashboard = function(){
-     originalUpdateDashboard();
-     if(typeof window.initWorkspace==='function') window.initWorkspace();
-   };
- }
-})();
+const aiProjectStore = {
+  '상무 푸르지오 108동 303호': {
+    contract: 4500,
+    expenses: 1860,
+    collected: 2700,
+    progress: 68,
+    tasks: ['전기배선 완료 사진 업로드', '필름 색상 최종 확인', '내일 현장 방문 시간 확정'],
+    issues: ['전기배선 완료 사진 미업로드', '필름 색상 고객 최종 확인 필요'],
+    schedule: ['목공 가구 설치 완료', '전기배선 오늘 진행', '필름 내일 예정']
+  },
+  '일곡동 롯데아파트 103동': {
+    contract: 3200,
+    expenses: 1780,
+    collected: 1600,
+    progress: 42,
+    tasks: ['타일 샘플 고객 확인', '폐기물 처리비 정산 확인'],
+    issues: ['타일 샘플 확정 전', '외주비 입력 후 정산 확인 필요'],
+    schedule: ['철거 완료', '타일 협의 대기', '전기 일정 조율 중']
+  },
+  '양림 힐스 103동 1906호': {
+    contract: 2850,
+    expenses: 420,
+    collected: 500,
+    progress: 12,
+    tasks: ['착공 전 자재 발주 목록 작성', '고객 미팅 일정 확정'],
+    issues: ['착공 전 견적 범위 재확인 필요'],
+    schedule: ['실측 완료', '착공 예정']
+  }
+};
+
+function getSelectedAiProject(){
+  const select=document.getElementById('workspace-project-select');
+  const name=select ? select.value : '상무 푸르지오 108동 303호';
+  return { name, data: aiProjectStore[name] || aiProjectStore['상무 푸르지오 108동 303호'] };
+}
+
+function setAiPrompt(text){
+  const input=document.getElementById('ai-prompt');
+  if(input) input.value=text;
+}
+
+function runAiInvestigation(){
+  const prompt=(document.getElementById('ai-prompt')?.value || '현장 상태를 조사해줘').trim();
+  const {name,data}=getSelectedAiProject();
+  const margin=data.contract-data.expenses;
+  const marginRate=data.contract ? (margin/data.contract*100) : 0;
+  const unpaid=Math.max(0,data.contract-data.collected);
+  const spendRate=data.contract ? (data.expenses/data.contract*100) : 0;
+  const risks=[];
+  if(marginRate<25) risks.push('예상 마진이 25% 미만입니다. 실행비 추가 입력 전 승인 확인이 필요합니다.');
+  if(spendRate>60 && data.progress<70) risks.push('공정 진행률 대비 지출률이 높습니다. 남은 공정의 예산 초과 가능성이 있습니다.');
+  if(unpaid>1000) risks.push('미수금이 1,000만 원 이상입니다. 다음 수금 일정을 먼저 확인하세요.');
+  if(data.issues.length) risks.push(data.issues[0]);
+  if(!risks.length) risks.push('현재 수치 기준 큰 위험은 없습니다. 일정 완료 증빙만 계속 관리하면 됩니다.');
+  const recommendation = marginRate<25
+    ? '추가 지출은 바로 입력하지 말고 견적 잔액과 고객 추가공사 여부를 먼저 확인하세요.'
+    : unpaid>1000
+      ? '수금 예정일을 확인하고 고객 안내 문자를 승인 후 발송하세요.'
+      : '오늘 할 일 중 사진 업로드와 고객 확인 항목을 먼저 처리하세요.';
+  const approval = unpaid>1000
+    ? '수금 확인 알림 만들기'
+    : data.tasks.length
+      ? '오늘 우선 할 일로 표시'
+      : '조사 기록만 저장';
+  const session={
+    id:'AI-'+Date.now(),
+    time:new Date().toLocaleString('ko-KR'),
+    project:name,
+    prompt,
+    status:'완료',
+    tools:['get_project_summary','get_schedule_risks','get_expense_vs_estimate','get_unpaid_collections','get_open_issues'],
+    rows:[
+      ['현장 요약', `계약 ${data.contract.toLocaleString('ko-KR')}만, 지출 ${data.expenses.toLocaleString('ko-KR')}만, 진행률 ${data.progress}%`],
+      ['재무 판단', `예상 마진 ${margin.toLocaleString('ko-KR')}만 (${marginRate.toFixed(1)}%), 미수금 ${unpaid.toLocaleString('ko-KR')}만`],
+      ['위험 신호', risks.join(' / ')],
+      ['권장 조치', recommendation]
+    ],
+    approval
+  };
+  saveAiSession(session);
+  renderAiSessions();
+}
+
+function saveAiSession(session){
+  const key='gonggancheckcheck_ai_sessions';
+  const list=JSON.parse(localStorage.getItem(key)||'[]');
+  list.unshift(session);
+  localStorage.setItem(key, JSON.stringify(list.slice(0,12)));
+}
+
+function renderAiSessions(){
+  const wrap=document.getElementById('ai-session-list');
+  if(!wrap) return;
+  const list=JSON.parse(localStorage.getItem('gonggancheckcheck_ai_sessions')||'[]');
+  if(!list.length){ wrap.innerHTML='<div class="ai-empty">아직 실행된 AI 조사 세션이 없습니다.</div>'; return; }
+  wrap.innerHTML=list.map(s=>`<div class="ai-session"><div class="ai-session-head"><div><h4>${escapeHtml(s.project)}</h4><small>${escapeHtml(s.time)} · ${escapeHtml(s.prompt)}</small></div><span class="ai-badge">${escapeHtml(s.status)}</span></div><div class="ai-tools">${s.tools.map(t=>`<span class="ai-tool">${t}</span>`).join('')}</div><div class="ai-result">${s.rows.map(r=>`<div class="ai-result-row"><b>${escapeHtml(r[0])}</b>${escapeHtml(r[1])}</div>`).join('')}</div><div class="ai-approval"><span>쓰기 작업은 아직 실행하지 않았습니다. 승인안: ${escapeHtml(s.approval)}</span><button onclick="markAiApproval(this)">보류</button><button class="primary" onclick="markAiApproval(this)">승인 표시</button></div></div>`).join('');
+}
+
+function markAiApproval(btn){
+  const box=btn.closest('.ai-approval');
+  if(!box) return;
+  box.querySelector('span').textContent = btn.classList.contains('primary') ? '승인 표시됨. 실제 데이터 변경은 다음 단계에서 별도 확인 후 실행합니다.' : '보류 처리됨. 데이터는 변경하지 않았습니다.';
+  box.querySelectorAll('button').forEach(b=>b.disabled=true);
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+window.addEventListener('load', renderAiSessions);
