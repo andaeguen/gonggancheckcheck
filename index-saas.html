@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공간첵첵 - 인테리어 현장 관리 SaaS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: #f5f7fa; }
+        
+        /* Navigation */
+        nav { 
+            background: #fff; 
+            padding: 1rem 2rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        nav h1 { font-size: 1.5rem; color: #2c3e50; }
+        nav button { 
+            padding: 0.5rem 1rem; 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        
+        /* Pages */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* Landing Page */
+        #landing {
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        #landing h2 { font-size: 2.5rem; margin: 2rem 0; color: #2c3e50; }
+        #landing p { font-size: 1.1rem; color: #555; margin: 1rem 0; }
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: #27ae60;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            margin: 2rem 0.5rem;
+            cursor: pointer;
+            border: none;
+        }
+        .cta-button:hover { background: #229954; }
+        
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .feature-card h3 { margin-bottom: 1rem; color: #2c3e50; }
+        
+        /* Pricing */
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .price-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .price-card h3 { margin-bottom: 1rem; }
+        .price-card .price { font-size: 2rem; font-weight: bold; color: #27ae60; margin: 1rem 0; }
+        .price-card ul { text-align: left; list-style: none; margin: 1rem 0; }
+        .price-card li { padding: 0.5rem 0; }
+        
+        /* Form Styles */
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 2rem auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover { background: #2980b9; }
+        
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 0;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+        }
+        .sidebar button {
+            width: 100%;
+            background: transparent;
+            color: white;
+            border: 1px solid #34495e;
+            margin: 0.5rem 0;
+            padding: 0.75rem;
+            text-align: left;
+            cursor: pointer;
+        }
+        .sidebar button:hover { background: #34495e; }
+        .sidebar button.active { background: #3498db; }
+        
+        .main-content {
+            padding: 2rem;
+        }
+        
+        .status-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .status-message.success { background: #d4edda; color: #155724; }
+        .status-message.error { background: #f8d7da; color: #721c24; }
+        .status-message.info { background: #d1ecf1; color: #0c5460; }
+        
+        /* Payment Form */
+        .payment-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 2rem auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .payment-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <h1>공간첵첵</h1>
+    <div>
+        <span id="user-info" style="margin-right: 1rem;"></span>
+        <button id="auth-btn" onclick="handleAuthBtn()">로그인</button>
+        <button id="logout-btn" style="display: none;" onclick="logout()">로그아웃</button>
+    </div>
+</nav>
+
+<!-- Landing Page -->
+<div id="landing" class="page active">
+    <h2>공간첵첵</h2>
+    <p>인테리어 현장 관리의 새로운 기준</p>
+    <p>프로젝트 일정, 비용, 자재를 한곳에서 관리하세요</p>
+    
+    <div class="features">
+        <div class="feature-card">
+            <h3>📅 일정 관리</h3>
+            <p>공정별 일정을 체계적으로 관리하고 진행 상황을 실시간으로 추적하세요</p>
+        </div>
+        <div class="feature-card">
+            <h3>💰 비용 관리</h3>
+            <p>자재비, 노무비, 외주비를 한눈에 파악하고 손익을 분석하세요</p>
+        </div>
+        <div class="feature-card">
+            <h3>📊 데이터 분석</h3>
+            <p>프로젝트별 수익성 분석과 시공 기록을 체계적으로 보관하세요</p>
+        </div>
+    </div>
+    
+    <h3 style="margin-top: 3rem; margin-bottom: 2rem; color: #2c3e50;">요금제</h3>
+    <div class="pricing">
+        <div class="price-card">
+            <h3>Free</h3>
+            <div class="price">무료</div>
+            <ul>
+                <li>✓ 프로젝트 3개</li>
+                <li>✓ 기본 기능</li>
+                <li>✓ 1명 사용</li>
+            </ul>
+            <button class="cta-button" onclick="goToSignup()">시작하기</button>
+        </div>
+        <div class="price-card">
+            <h3>Starter</h3>
+            <div class="price">₩29,000/월</div>
+            <ul>
+                <li>✓ 프로젝트 10개</li>
+                <li>✓ 모든 기능</li>
+                <li>✓ 최대 5명 사용</li>
+                <li>✓ 우선 지원</li>
+            </ul>
+            <button class="cta-button" onclick="goToPayment('starter')">구독하기</button>
+        </div>
+        <div class="price-card">
+            <h3>Professional</h3>
+            <div class="price">₩99,000/월</div>
+            <ul>
+                <li>✓ 무제한 프로젝트</li>
+                <li>✓ 모든 기능</li>
+                <li>✓ 최대 20명 사용</li>
+                <li>✓ 분석 & API</li>
+            </ul>
+            <button class="cta-button" onclick="goToPayment('professional')">구독하기</button>
+        </div>
+    </div>
+</div>
+
+<!-- Auth Page -->
+<div id="auth" class="page">
+    <div class="form-container">
+        <h2 id="auth-title" style="margin-bottom: 1rem; text-align: center; color: #2c3e50;">로그인</h2>
+        <div id="auth-status"></div>
+        
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+            <div class="form-group">
+                <label for="auth-email">이메일</label>
+                <input type="email" id="auth-email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="auth-password">비밀번호</label>
+                <input type="password" id="auth-password" name="password" required>
+            </div>
+            <button type="submit" id="auth-submit-btn">로그인</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1rem; color: #555;">
+            <a href="#" onclick="toggleAuthMode(); return false;" style="color: #3498db; text-decoration: none;">
+                <span id="auth-toggle-text">계정이 없으신가요? 회원가입</span>
+            </a>
+        </p>
+    </div>
+</div>
+
+<!-- Payment Page -->
+<div id="payment" class="page">
+    <div class="payment-form">
+        <h2 style="margin-bottom: 2rem; text-align: center; color: #2c3e50;">결제</h2>
+        
+        <div class="payment-info">
+            <p><strong>상품:</strong> <span id="payment-plan-name"></span></p>
+            <p><strong>가격:</strong> <span id="payment-plan-price"></span></p>
+            <p style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                매달 자동갱신됩니다. 언제든지 구독을 취소할 수 있습니다.
+            </p>
+        </div>
+        
+        <form id="payment-form" onsubmit="handlePayment(event)">
+            <div class="form-group">
+                <label for="payment-name">상호명</label>
+                <input type="text" id="payment-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="payment-email">이메일</label>
+                <input type="email" id="payment-email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="payment-phone">연락처</label>
+                <input type="tel" id="payment-phone" name="phone" required>
+            </div>
+            
+            <button type="submit">결제하기 (토스페이먼츠)</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1rem;">
+            <button onclick="goToLanding();" style="background: transparent; color: #3498db; cursor: pointer; border: none; text-decoration: underline;">
+                돌아가기
+            </button>
+        </p>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="page">
+    <div class="dashboard">
+        <div class="sidebar">
+            <h3 style="margin-bottom: 1rem;">메뉴</h3>
+            <button class="active" onclick="switchTab('overview')">📊 개요</button>
+            <button onclick="switchTab('projects')">🏗️ 프로젝트</button>
+            <button onclick="switchTab('settings')">⚙️ 설정</button>
+        </div>
+        
+        <div class="main-content">
+            <div id="overview-tab">
+                <h2>대시보드</h2>
+                <p>환영합니다! <strong id="dashboard-user"></strong></p>
+                <div class="status-message info">
+                    현재 <strong id="dashboard-plan">Free</strong> 플랜을 사용하고 있습니다.
+                </div>
+            </div>
+            
+            <div id="projects-tab" style="display: none;">
+                <h2>프로젝트</h2>
+                <p>🚧 프로젝트 기능은 곧 추가됩니다.</p>
+                <p>현재는 기본 구조만 제공됩니다. 전체 안김장부 앱은 별도 페이지를 통해 제공됩니다.</p>
+            </div>
+            
+            <div id="settings-tab" style="display: none;">
+                <h2>설정</h2>
+                <div class="form-container" style="max-width: 100%;">
+                    <h3>계정 정보</h3>
+                    <p>이메일: <strong id="settings-email"></strong></p>
+                    <p>팀명: <strong id="settings-team">미등록</strong></p>
+                    <button onclick="logout()">로그아웃</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global State
+let currentUser = null;
+let currentTeam = null;
+let isSignupMode = false;
+let currentPlan = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+});
+
+// Check if user is logged in
+function checkAuth() {
+    const user = localStorage.getItem('user');
+    if (user) {
+        currentUser = JSON.parse(user);
+        showPage('dashboard');
+        updateNavbar();
+    } else {
+        showPage('landing');
+    }
+}
+
+// Show specific page
+function showPage(pageName) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageName).classList.add('active');
+    
+    if (pageName === 'dashboard') {
+        updateDashboard();
+    }
+}
+
+// Update navbar
+function updateNavbar() {
+    if (currentUser) {
+        document.getElementById('user-info').textContent = currentUser.email;
+        document.getElementById('auth-btn').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'inline-block';
+    } else {
+        document.getElementById('user-info').textContent = '';
+        document.getElementById('auth-btn').style.display = 'inline-block';
+        document.getElementById('logout-btn').style.display = 'none';
+    }
+}
+
+// Navigation
+function goToSignup() { showPage('auth'); isSignupMode = true; updateAuthForm(); }
+function goToPayment(plan) { 
+    if (!currentUser) { alert('로그인이 필요합니다'); goToSignup(); return; }
+    currentPlan = plan; 
+    showPage('payment');
+    updatePaymentForm();
+}
+function goToLanding() { showPage('landing'); }
+function handleAuthBtn() { showPage('auth'); isSignupMode = false; updateAuthForm(); }
+
+// Auth
+function updateAuthForm() {
+    const title = isSignupMode ? '회원가입' : '로그인';
+    const buttonText = isSignupMode ? '회원가입' : '로그인';
+    document.getElementById('auth-title').textContent = title;
+    document.getElementById('auth-submit-btn').textContent = buttonText;
+    document.getElementById('auth-toggle-text').textContent = isSignupMode 
+        ? '이미 계정이 있으신가요? 로그인' 
+        : '계정이 없으신가요? 회원가입';
+}
+
+function toggleAuthMode() {
+    isSignupMode = !isSignupMode;
+    updateAuthForm();
+    document.getElementById('auth-form').reset();
+}
+
+function handleAuthSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    
+    if (isSignupMode) {
+        // Mock signup
+        const user = { email, password, id: Date.now().toString(), createdAt: new Date().toISOString() };
+        localStorage.setItem('user', JSON.stringify(user));
+        currentUser = user;
+        showStatus('회원가입 성공!', 'success', 'auth-status');
+        setTimeout(() => { showPage('dashboard'); updateNavbar(); }, 1000);
+    } else {
+        // Mock login
+        if (email && password.length >= 6) {
+            const user = { email, id: Date.now().toString() };
+            localStorage.setItem('user', JSON.stringify(user));
+            currentUser = user;
+            showStatus('로그인 성공!', 'success', 'auth-status');
+            setTimeout(() => { showPage('dashboard'); updateNavbar(); }, 1000);
+        } else {
+            showStatus('로그인 실패. 이메일과 비밀번호를 확인하세요.', 'error', 'auth-status');
+        }
+    }
+}
+
+function logout() {
+    localStorage.removeItem('user');
+    currentUser = null;
+    currentTeam = null;
+    showPage('landing');
+    updateNavbar();
+}
+
+// Payment
+function updatePaymentForm() {
+    const plans = {
+        starter: { name: 'Starter', price: '₩29,000/월' },
+        professional: { name: 'Professional', price: '₩99,000/월' }
+    };
+    const plan = plans[currentPlan];
+    document.getElementById('payment-plan-name').textContent = plan.name;
+    document.getElementById('payment-plan-price').textContent = plan.price;
+}
+
+function handlePayment(e) {
+    e.preventDefault();
+    const name = document.getElementById('payment-name').value;
+    const email = document.getElementById('payment-email').value;
+    const phone = document.getElementById('payment-phone').value;
+    
+    // Mock payment (실제로는 토스페이먼츠 API 호출)
+    alert(`결제 페이지로 이동합니다.\n\n상호명: ${name}\n이메일: ${email}\n연락처: ${phone}\n상품: ${currentPlan}\n\n토스페이먼츠 결제창이 열립니다.`);
+    
+    // 실제 결제 연동
+    console.log('토스페이먼츠 결제 시작:', { name, email, phone, plan: currentPlan });
+}
+
+// Dashboard
+function updateDashboard() {
+    document.getElementById('dashboard-user').textContent = currentUser?.email || '사용자';
+    document.getElementById('settings-email').textContent = currentUser?.email || '-';
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');
+    document.getElementById(tab + '-tab').style.display = 'block';
+    
+    document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// Utilities
+function showStatus(message, type, elementId) {
+    const el = document.getElementById(elementId);
+    el.className = `status-message ${type}`;
+    el.textContent = message;
+}
+</script>
+
+</body>
+</html>
