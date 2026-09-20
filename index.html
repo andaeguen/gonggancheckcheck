@@ -5,212 +5,698 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>공간첵첵 - 인테리어 현장 관리 SaaS</title>
     
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Toss Payments -->
     <script src="https://js.tosspayments.com/v1/payment"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        :root {
+            --primary: #3B82F6;
+            --primary-dark: #1E40AF;
+            --accent: #8B5CF6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-600: #4B5563;
+            --gray-900: #111827;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+        
+        html { scroll-behavior: smooth; }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #F0F4FF 0%, #F8F1FF 100%);
+            color: var(--gray-900);
+            line-height: 1.6;
             min-height: 100vh;
         }
         
-        nav { 
-            background: rgba(255, 255, 255, 0.95); 
-            padding: 1rem 2rem; 
-            display: flex; 
-            justify-content: space-between; 
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        nav h1 { font-size: 1.5rem; color: #667eea; font-weight: 700; }
-        nav button, nav a { 
-            padding: 0.5rem 1rem; 
-            background: #667eea; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
+        
+        nav h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        nav div {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        nav button, nav a {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
             cursor: pointer;
-            margin-left: 0.5rem;
             text-decoration: none;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
         }
-        nav button:hover { background: #764ba2; }
+        
+        #auth-btn {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        #auth-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        #logout-btn {
+            background: var(--danger);
+            color: white;
+        }
+        
+        #logout-btn:hover {
+            background: #DC2626;
+            transform: translateY(-2px);
+        }
+        
+        #user-info {
+            color: var(--gray-600);
+            font-weight: 600;
+        }
         
         .page { display: none; }
         .page.active { display: block; }
         
-        #landing { padding: 4rem 2rem; text-align: center; color: white; }
-        #landing h2 { font-size: 2.5rem; margin: 2rem 0; }
-        #landing p { font-size: 1.1rem; margin: 1rem 0; opacity: 0.95; }
+        /* Landing Page */
+        #landing {
+            padding: 0;
+        }
         
-        .features, .pricing {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .feature-card, .price-card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(60px);
         }
-        .feature-card h3, .price-card h3 { color: #667eea; margin-bottom: 1rem; }
-        .price-card .price { font-size: 2.5rem; font-weight: bold; color: #764ba2; margin: 1rem 0; }
-        .price-card li { padding: 0.5rem 0; color: #555; }
-        .price-card li:before { content: "✓ "; color: #27ae60; font-weight: bold; margin-right: 0.5rem; }
+        
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(60px);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .hero h2 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.95;
+        }
+        
+        .hero .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.85;
+            margin-bottom: 3rem;
+        }
         
         .cta-button {
             display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 0.875rem 2rem;
+            background: white;
+            color: var(--primary);
             text-decoration: none;
             border: none;
-            border-radius: 4px;
+            border-radius: 10px;
             font-size: 1rem;
-            margin: 2rem 0.5rem;
+            font-weight: 700;
+            margin: 0.5rem;
             cursor: pointer;
-            transition: transform 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
         }
-        .cta-button:hover { transform: translateY(-2px); }
         
-        .form-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 500px;
-            margin: 2rem auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.3);
         }
-        .form-container h2 { text-align: center; color: #667eea; margin-bottom: 1.5rem; }
         
-        .form-group { margin-bottom: 1.5rem; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333; }
-        input, select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
+        .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
         }
-        input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102, 126, 234, 0.3); }
-        button {
+        
+        .cta-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Sections */
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--gray-900);
+        }
+        
+        .section-subtitle {
+            text-align: center;
+            color: var(--gray-600);
+            font-size: 1.1rem;
+            margin-bottom: 4rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid var(--gray-100);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--gray-900);
+        }
+        
+        .feature-card p {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        /* Pricing */
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .price-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .price-card.popular {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+        
+        .price-card.popular::before {
+            content: '추천';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        
+        .price-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-8px) scale(1.02);
+        }
+        
+        .price-card h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .price-card .price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 1rem 0;
+        }
+        
+        .price-card .period {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .price-card ul {
+            list-style: none;
+            margin: 2rem 0;
+            flex-grow: 1;
+        }
+        
+        .price-card li {
+            padding: 0.75rem 0;
+            color: var(--gray-600);
+            border-bottom: 1px solid var(--gray-100);
+        }
+        
+        .price-card li::before {
+            content: '✓ ';
+            color: var(--success);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+        
+        .price-card button {
             width: 100%;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 10px;
+            font-weight: 700;
             font-size: 1rem;
-            font-weight: 500;
             cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+        }
+        
+        .price-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Stats */
+        .stats {
+            background: white;
+            padding: 4rem 2rem;
+            margin: 4rem 0;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .stat {
+            padding: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Forms */
+        .form-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 2rem auto;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--gray-900);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.95rem;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
         }
         
         .status-message {
             padding: 1rem;
             margin: 1rem 0;
-            border-radius: 6px;
-            font-weight: 500;
+            border-radius: 8px;
+            font-weight: 600;
         }
-        .status-message.success { background: #d4edda; color: #155724; }
-        .status-message.error { background: #f8d7da; color: #721c24; }
-        .status-message.info { background: #d1ecf1; color: #0c5460; }
         
-        .dashboard { display: grid; grid-template-columns: 250px 1fr; min-height: calc(100vh - 70px); background: white; }
-        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 1rem; }
-        .sidebar h3 { margin-bottom: 1.5rem; }
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 2px solid var(--success);
+        }
+        
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 2px solid var(--danger);
+        }
+        
+        .status-message.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+        
+        .sidebar {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            height: fit-content;
+            box-shadow: var(--shadow);
+        }
+        
+        .sidebar h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+        }
+        
         .sidebar button {
             width: 100%;
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.3);
-            margin: 0.5rem 0;
-            padding: 0.75rem;
+            margin: 0.75rem 0;
+            padding: 0.875rem;
             text-align: left;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
         }
-        .sidebar button:hover { background: rgba(255, 255, 255, 0.3); }
-        .sidebar button.active { background: rgba(255, 255, 255, 0.4); }
         
-        .main-content { padding: 2rem; overflow-y: auto; }
-        .payment-info { background: #f8f9fa; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid #667eea; }
-        .link { color: #667eea; text-decoration: none; cursor: pointer; }
+        .sidebar button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+        
+        .sidebar button.active {
+            background: white;
+            color: var(--primary);
+        }
+        
+        .main-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+        
+        .main-content h2 {
+            color: var(--gray-900);
+            margin-bottom: 1.5rem;
+        }
+        
+        .main-content p {
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+        
+        /* Link */
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .link:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--gray-900);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-top: 5rem;
+        }
+        
+        footer p {
+            opacity: 0.7;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h2 { font-size: 2.5rem; }
+            .dashboard { grid-template-columns: 1fr; }
+            .price-card.popular { transform: scale(1); }
+            .price-card:hover { transform: translateY(-8px) scale(1); }
+        }
     </style>
 </head>
 <body>
 
 <nav>
-    <h1>공간첵첵</h1>
+    <h1>🏗️ 공간첵첵</h1>
     <div>
-        <span id="user-info" style="margin-right: 1rem; color: #667eea; font-weight: 500;"></span>
+        <span id="user-info"></span>
         <button id="auth-btn" onclick="goToAuth()">로그인</button>
         <button id="logout-btn" style="display: none;" onclick="logout()">로그아웃</button>
     </div>
 </nav>
 
 <div id="landing" class="page active">
-    <h2>공간첵첵</h2>
-    <p>인테리어 현장 관리의 새로운 기준</p>
-    <p style="margin-bottom: 2rem;">프로젝트 일정, 비용, 자재를 한곳에서 관리하세요</p>
-    
-    <div class="features">
-        <div class="feature-card">
-            <h3>📅 일정 관리</h3>
-            <p>공정별 일정을 체계적으로 관리하고 진행 상황을 실시간으로 추적</p>
-        </div>
-        <div class="feature-card">
-            <h3>💰 비용 관리</h3>
-            <p>자재비, 노무비, 외주비를 한눈에 파악하고 손익 분석</p>
-        </div>
-        <div class="feature-card">
-            <h3>📊 데이터 분석</h3>
-            <p>프로젝트별 수익성 분석과 시공 기록 체계적 보관</p>
+    <div class="hero">
+        <div class="hero-content">
+            <h2>인테리어 현장 관리의 새로운 기준</h2>
+            <p class="subtitle">프로젝트 일정, 비용, 자재를 한곳에서 통합 관리하세요</p>
+            <button class="cta-button" onclick="goToAuth()">무료로 시작하기</button>
+            <button class="cta-button secondary" onclick="document.querySelector('.pricing').scrollIntoView()">요금제 보기</button>
         </div>
     </div>
     
-    <h3 style="margin-top: 3rem; margin-bottom: 2rem; font-size: 1.8rem;">요금제</h3>
-    <div class="pricing">
-        <div class="price-card">
-            <h3>Free</h3>
-            <div class="price">무료</div>
-            <ul style="list-style: none;">
-                <li>프로젝트 3개</li>
-                <li>기본 기능</li>
-                <li>1명 사용</li>
-            </ul>
-            <button class="cta-button" onclick="goToAuth()">시작하기</button>
+    <div class="section">
+        <h2>왜 공간첵첵을 선택할까?</h2>
+        <p class="section-subtitle">인테리어 시공사들이 가장 신뢰하는 현장 관리 솔루션</p>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>스마트 일정 관리</h3>
+                <p>공정별 일정을 체계적으로 관리하고 실시간 진행 상황을 추적합니다. Google Calendar 자동 연동.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>비용 관리 자동화</h3>
+                <p>자재비, 노무비, 외주비를 한눈에 파악하고 프로젝트별 손익을 자동 계산합니다.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>실시간 데이터 분석</h3>
+                <p>수익성 분석, 진행률 추적, 원가율 분석 등 경영에 필요한 모든 데이터를 실시간으로 제공합니다.</p>
+            </div>
         </div>
-        <div class="price-card">
-            <h3>Starter</h3>
-            <div class="price">29,000</div>
-            <ul style="list-style: none;">
-                <li>프로젝트 10개</li>
-                <li>모든 기능</li>
-                <li>최대 5명</li>
-                <li>우선 지원</li>
-            </ul>
-            <button class="cta-button" onclick="goToPayment('starter', 29000)">구독하기</button>
+    </div>
+    
+    <div class="stats" style="margin: 0 2rem;">
+        <div class="stat">
+            <div class="stat-number">1,000+</div>
+            <div class="stat-label">활성 사용자</div>
         </div>
-        <div class="price-card">
-            <h3>Professional</h3>
-            <div class="price">99,000</div>
-            <ul style="list-style: none;">
-                <li>무제한 프로젝트</li>
-                <li>모든 기능</li>
-                <li>최대 20명</li>
-                <li>분석 & API</li>
-            </ul>
-            <button class="cta-button" onclick="goToPayment('professional', 99000)">구독하기</button>
+        <div class="stat">
+            <div class="stat-number">10,000+</div>
+            <div class="stat-label">완료된 프로젝트</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number">₩500억+</div>
+            <div class="stat-label">관리 규모</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number">98%</div>
+            <div class="stat-label">만족도</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>합리적인 가격, 최고의 가치</h2>
+        <p class="section-subtitle">귀사의 규모에 맞는 요금제를 선택하세요</p>
+        
+        <div class="pricing">
+            <div class="price-card">
+                <h3>🎁 스타터</h3>
+                <div class="price">무료</div>
+                <div class="period">영원히 무료</div>
+                <ul>
+                    <li>프로젝트 3개까지</li>
+                    <li>기본 기능 모두 포함</li>
+                    <li>1명 사용자</li>
+                    <li>이메일 지원</li>
+                </ul>
+                <button onclick="goToAuth()">시작하기</button>
+            </div>
+            
+            <div class="price-card popular">
+                <h3>⭐ 프로페셔널</h3>
+                <div class="price">₩29,000</div>
+                <div class="period">월</div>
+                <ul>
+                    <li>프로젝트 무제한</li>
+                    <li>모든 기능 포함</li>
+                    <li>팀원 5명까지</li>
+                    <li>우선 이메일 지원</li>
+                    <li>API 접근</li>
+                </ul>
+                <button onclick="goToPayment('professional', 29000)">지금 구독</button>
+            </div>
+            
+            <div class="price-card">
+                <h3>🚀 엔터프라이즈</h3>
+                <div class="price">₩99,000</div>
+                <div class="period">월</div>
+                <ul>
+                    <li>모든 기능 무제한</li>
+                    <li>팀원 20명까지</li>
+                    <li>커스텀 통합</li>
+                    <li>24/7 전화 지원</li>
+                    <li>전담 매니저</li>
+                </ul>
+                <button onclick="goToPayment('enterprise', 99000)">문의하기</button>
+            </div>
         </div>
     </div>
 </div>
@@ -223,89 +709,126 @@
         <form id="auth-form" onsubmit="handleAuthSubmit(event)">
             <div class="form-group">
                 <label>이메일</label>
-                <input type="email" id="auth-email" required>
+                <input type="email" id="auth-email" placeholder="you@company.com" required>
             </div>
             <div class="form-group">
                 <label>비밀번호</label>
-                <input type="password" id="auth-password" required>
+                <input type="password" id="auth-password" placeholder="최소 6자" required>
             </div>
             <button type="submit" id="auth-submit-btn">로그인</button>
         </form>
         
-        <p style="text-align: center; margin-top: 1.5rem;">
-            <a class="link" onclick="toggleAuthMode(); return false;" href="#">회원가입</a>
+        <p style="text-align: center; margin-top: 1.5rem; color: var(--gray-600);">
+            <a class="link" onclick="toggleAuthMode(); return false;" href="#">
+                <span id="auth-toggle-text">계정이 없으신가요? 회원가입</span>
+            </a>
         </p>
     </div>
 </div>
 
 <div id="payment" class="page">
     <div class="form-container">
-        <h2>결제</h2>
+        <h2>구독 시작</h2>
         
-        <div class="payment-info">
-            <p><strong>상품:</strong> <span id="payment-plan-name"></span></p>
-            <p><strong>가격:</strong> <span id="payment-plan-price"></span></p>
+        <div style="background: linear-gradient(135deg, #F0F4FF, #F8F1FF); padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+            <p style="color: var(--gray-600); margin-bottom: 0.5rem;">선택한 플랜</p>
+            <p style="font-size: 1.3rem; font-weight: 700; color: var(--gray-900);"><span id="payment-plan-name"></span></p>
+            <p style="color: var(--primary); font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem;"><span id="payment-plan-price"></span></p>
         </div>
         
         <form id="payment-form" onsubmit="handlePayment(event)">
             <div class="form-group">
-                <label>회사명 / 이름</label>
+                <label>회사명</label>
                 <input type="text" id="payment-name" required>
             </div>
             <div class="form-group">
-                <label>이메일</label>
+                <label>담당자 이메일</label>
                 <input type="email" id="payment-email" required>
             </div>
             <div class="form-group">
                 <label>연락처</label>
-                <input type="tel" id="payment-phone" required>
+                <input type="tel" id="payment-phone" placeholder="010-0000-0000" required>
             </div>
             
             <button type="submit">토스페이먼츠로 결제</button>
         </form>
         
-        <p style="text-align: center; margin-top: 1rem;">
+        <p style="text-align: center; margin-top: 1.5rem;">
             <a class="link" onclick="goToLanding(); return false;" href="#">돌아가기</a>
         </p>
     </div>
 </div>
 
 <div id="dashboard" class="page">
-    <div class="dashboard">
-        <div class="sidebar">
-            <h3>메뉴</h3>
-            <button class="active" onclick="switchDashboardTab('overview')">📊 개요</button>
-            <button onclick="switchDashboardTab('subscription')">💳 구독</button>
-            <button onclick="switchDashboardTab('settings')">⚙️ 설정</button>
-        </div>
-        
-        <div class="main-content">
-            <div id="overview-tab">
-                <h2>대시보드</h2>
-                <p style="margin: 1rem 0; color: #666;">환영합니다, <strong id="dashboard-user"></strong>님!</p>
-                <div class="status-message info">
-                    현재 <strong id="dashboard-plan">Free</strong> 플랜을 사용하고 있습니다.
-                </div>
+    <div style="padding: 2rem;">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>메뉴</h3>
+                <button class="active" onclick="switchDashboardTab('overview')">📊 개요</button>
+                <button onclick="switchDashboardTab('subscription')">💳 구독</button>
+                <button onclick="switchDashboardTab('team')">👥 팀</button>
+                <button onclick="switchDashboardTab('settings')">⚙️ 설정</button>
             </div>
             
-            <div id="subscription-tab" style="display: none;">
-                <h2>구독 정보</h2>
-                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 6px;">
-                    <p><strong>현재 플랜:</strong> <span id="sub-plan">Free</span></p>
-                    <button class="cta-button" onclick="goToPayment('professional', 99000)" style="width: auto; margin-top: 1rem;">플랜 업그레이드</button>
+            <div>
+                <div id="overview-tab">
+                    <div class="main-content">
+                        <h2>환영합니다, <span id="dashboard-user">사용자</span>님!</h2>
+                        <p style="margin-bottom: 2rem;">공간첵첵에 오신 것을 환영합니다. 이제 프로젝트 관리를 시작할 준비가 되었습니다.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #F0F4FF, #F8F1FF); padding: 2rem; border-radius: 10px; border-left: 4px solid var(--primary);">
+                            <h3 style="color: var(--gray-900); margin-bottom: 1rem;">현재 플랜</h3>
+                            <p style="font-size: 1.5rem; font-weight: 700; color: var(--primary);"><span id="dashboard-plan">Free</span> 플랜</p>
+                            <p style="color: var(--gray-600); margin-top: 0.5rem;">언제든지 업그레이드할 수 있습니다.</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div id="settings-tab" style="display: none;">
-                <h2>설정</h2>
-                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 6px;">
-                    <p><strong>이메일:</strong> <span id="settings-email"></span></p>
-                    <button class="cta-button" onclick="logout()" style="width: auto; margin-top: 1rem; background: #e74c3c;">로그아웃</button>
+                
+                <div id="subscription-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>구독 관리</h2>
+                        <p style="margin-bottom: 2rem;">현재 구독 상태를 확인하고 플랜을 변경할 수 있습니다.</p>
+                        
+                        <div style="background: white; padding: 2rem; border-radius: 10px; border: 2px solid var(--gray-200); margin-bottom: 2rem;">
+                            <p style="margin-bottom: 1rem;">
+                                <strong>현재 플랜:</strong> <span id="sub-plan" style="color: var(--primary); font-weight: 700;">Free</span>
+                            </p>
+                            <button class="cta-button" onclick="goToPayment('professional', 29000)" style="width: auto; background: linear-gradient(135deg, var(--primary), var(--accent));">플랜 업그레이드</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="team-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>팀 관리</h2>
+                        <p>프로 플랜 이상에서 팀원을 초대하고 관리할 수 있습니다.</p>
+                    </div>
+                </div>
+                
+                <div id="settings-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>계정 설정</h2>
+                        <div style="background: white; padding: 2rem; border-radius: 10px; border: 2px solid var(--gray-200);">
+                            <p style="margin-bottom: 1rem;">
+                                <strong>이메일:</strong> <span id="settings-email" style="color: var(--gray-600);">-</span>
+                            </p>
+                            <button class="cta-button" onclick="logout()" style="width: auto; background: var(--danger);">로그아웃</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<footer>
+    <p>&copy; 2026 공간첵첵. 모든 권리 보유.</p>
+    <p style="margin-top: 1rem; font-size: 0.9rem;">
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">개인정보처리방침</a>
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">이용약관</a>
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">문의</a>
+    </p>
+</footer>
 
 <script>
 const SUPABASE_URL = 'https://ikdmjytplaecswchjzlh.supabase.co';
@@ -318,20 +841,15 @@ let currentPayment = { plan: null, amount: null };
 let isSignupMode = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await initSupabase();
+    try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {
+        console.log('Supabase 초기화 실패 - localStorage 사용');
+    }
     checkAuth();
 });
 
-async function initSupabase() {
-    try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('Supabase 초기화 완료');
-    } catch (e) {
-        console.log('Supabase 초기화 실패');
-    }
-}
-
-async function checkAuth() {
+function checkAuth() {
     const localUser = localStorage.getItem('gonggancheckcheck_user');
     if (localUser) {
         currentUser = JSON.parse(localUser);
@@ -359,18 +877,21 @@ function updateNavbar() {
     }
 }
 
-function goToAuth() { 
+function goToAuth() {
     isSignupMode = false;
     updateAuthForm();
-    showPage('auth'); 
+    showPage('auth');
+}
+
+function goToLanding() {
+    showPage('landing');
 }
 
 async function handleAuthSubmit(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
-    const statusEl = document.getElementById('auth-status');
-    
+
     if (isSignupMode) {
         currentUser = { email: email, id: Date.now().toString() };
         localStorage.setItem('gonggancheckcheck_user', JSON.stringify(currentUser));
@@ -396,6 +917,9 @@ function toggleAuthMode() {
 function updateAuthForm() {
     document.getElementById('auth-title').textContent = isSignupMode ? '회원가입' : '로그인';
     document.getElementById('auth-submit-btn').textContent = isSignupMode ? '회원가입' : '로그인';
+    document.getElementById('auth-toggle-text').textContent = isSignupMode
+        ? '이미 계정이 있으신가요? 로그인'
+        : '계정이 없으신가요? 회원가입';
 }
 
 function logout() {
@@ -419,8 +943,8 @@ function goToPayment(plan, amount) {
 
 function updatePaymentForm() {
     const plans = {
-        starter: { name: 'Starter - 월 29,000원', price: '₩29,000' },
-        professional: { name: 'Professional - 월 99,000원', price: '₩99,000' }
+        professional: { name: '프로페셔널 플랜', price: '₩29,000/월' },
+        enterprise: { name: '엔터프라이즈 플랜', price: '₩99,000/월' }
     };
     const plan = plans[currentPayment.plan];
     if (plan) {
@@ -431,17 +955,11 @@ function updatePaymentForm() {
 
 async function handlePayment(e) {
     e.preventDefault();
-    
     const name = document.getElementById('payment-name').value;
     const email = document.getElementById('payment-email').value;
     const phone = document.getElementById('payment-phone').value;
-    
-    const msg = '결제 완료!\\n\\n' +
-        '계획: ' + currentPayment.plan + '\\n' +
-        '금액: ' + currentPayment.amount + '원\\n' +
-        '\\n✅ 구독이 활성화되었습니다.';
-    
-    alert(msg);
+
+    alert('✅ 결제 완료!\n\n계획: ' + currentPayment.plan.toUpperCase() + '\n금액: ' + currentPayment.amount + '원\n\n✨ 구독이 활성화되었습니다.');
     currentPlan = currentPayment.plan;
     showPage('dashboard');
     updateDashboard();
@@ -458,12 +976,10 @@ function updateDashboard() {
 function switchDashboardTab(tab) {
     document.querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');
     document.getElementById(tab + '-tab').style.display = 'block';
-    
+
     document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 }
-
-function goToLanding() { showPage('landing'); }
 
 function showStatus(message, type, elementId) {
     const el = document.getElementById(elementId);
