@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공간첵첵 - 인테리어 현장 관리 SaaS</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.tosspayments.com/v1/payment"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #3B82F6;
+            --primary-dark: #1E40AF;
+            --accent: #8B5CF6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-600: #4B5563;
+            --gray-900: #111827;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+        
+        html { scroll-behavior: smooth; }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #F0F4FF 0%, #F8F1FF 100%);
+            color: var(--gray-900);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        nav div {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        nav button, nav a {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        #auth-btn {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        #auth-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        #logout-btn {
+            background: var(--danger);
+            color: white;
+        }
+        
+        #logout-btn:hover {
+            background: #DC2626;
+            transform: translateY(-2px);
+        }
+        
+        #user-info {
+            color: var(--gray-600);
+            font-weight: 600;
+        }
+        
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* Landing Page */
+        #landing {
+            padding: 0;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(60px);
+        }
+        
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(60px);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .hero h2 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+            line-height: 1.1;
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.95;
+        }
+        
+        .hero .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.85;
+            margin-bottom: 3rem;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 0.875rem 2rem;
+            background: white;
+            color: var(--primary);
+            text-decoration: none;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cta-button.secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .cta-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Sections */
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--gray-900);
+        }
+        
+        .section-subtitle {
+            text-align: center;
+            color: var(--gray-600);
+            font-size: 1.1rem;
+            margin-bottom: 4rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid var(--gray-100);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--gray-900);
+        }
+        
+        .feature-card p {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        /* Pricing */
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .price-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .price-card.popular {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+        
+        .price-card.popular::before {
+            content: '추천';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        
+        .price-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-8px) scale(1.02);
+        }
+        
+        .price-card h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .price-card .price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 1rem 0;
+        }
+        
+        .price-card .period {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .price-card ul {
+            list-style: none;
+            margin: 2rem 0;
+            flex-grow: 1;
+        }
+        
+        .price-card li {
+            padding: 0.75rem 0;
+            color: var(--gray-600);
+            border-bottom: 1px solid var(--gray-100);
+        }
+        
+        .price-card li::before {
+            content: '✓ ';
+            color: var(--success);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+        
+        .price-card button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+        }
+        
+        .price-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Stats */
+        .stats {
+            background: white;
+            padding: 4rem 2rem;
+            margin: 4rem 0;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .stat {
+            padding: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Forms */
+        .form-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 2rem auto;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--gray-900);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.95rem;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        .status-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 2px solid var(--success);
+        }
+        
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 2px solid var(--danger);
+        }
+        
+        .status-message.info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        /* Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+        
+        .sidebar {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            height: fit-content;
+            box-shadow: var(--shadow);
+        }
+        
+        .sidebar h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .sidebar button {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 0.75rem 0;
+            padding: 0.875rem;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .sidebar button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+        
+        .sidebar button.active {
+            background: white;
+            color: var(--primary);
+        }
+        
+        .main-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+        
+        .main-content h2 {
+            color: var(--gray-900);
+            margin-bottom: 1.5rem;
+        }
+        
+        .main-content p {
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+        
+        /* Link */
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .link:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--gray-900);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-top: 5rem;
+        }
+        
+        footer p {
+            opacity: 0.7;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h2 { font-size: 2.5rem; }
+            .dashboard { grid-template-columns: 1fr; }
+            .price-card.popular { transform: scale(1); }
+            .price-card:hover { transform: translateY(-8px) scale(1); }
+        }
+    
+/* Product showcase */
+.showcase-wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.showcase-hero{display:grid;grid-template-columns:1fr 1.08fr;gap:52px;align-items:center;max-width:1180px;margin:0 auto;padding:76px 24px 62px}
+.showcase-kicker{display:inline-flex;align-items:center;gap:8px;color:#2563EB;font-weight:800;font-size:13px;letter-spacing:.02em;margin-bottom:18px}
+.showcase-kicker:before{content:'';width:8px;height:8px;border-radius:50%;background:#10B981;box-shadow:0 0 0 6px rgba(16,185,129,.13)}
+.showcase-hero h2{font-size:clamp(38px,5vw,64px);line-height:1.08;letter-spacing:-.06em;margin:0 0 22px;color:#111827}
+.showcase-hero h2 span{background:linear-gradient(135deg,#2563EB,#7C3AED);-webkit-background-clip:text;color:transparent}
+.showcase-hero p{font-size:18px;color:#64748B;line-height:1.7;margin:0 0 28px}
+.showcase-hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.showcase-hero-actions .cta-button{margin:0}
+.showcase-note{font-size:12px!important;color:#94A3B8!important;margin-top:15px!important}
+.product-window{background:#0F172A;border-radius:22px;padding:10px;box-shadow:0 30px 80px rgba(30,64,175,.22);transform:none;border:1px solid rgba(255,255,255,.45)}
+.product-window-inner{background:#F8FAFC;border-radius:15px;overflow:hidden}
+.product-topbar{height:46px;background:#fff;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:12px;color:#475569}
+.product-brand{font-weight:800;color:#0F172A}.product-live{color:#10B981;font-weight:700;display:flex;align-items:center;gap:5px}.product-live:before{content:'';width:6px;height:6px;border-radius:50%;background:#10B981}
+.product-body{display:grid;grid-template-columns:145px 1fr;min-height:335px}.product-side{background:#F1F5F9;padding:16px 10px}.product-side strong{display:block;font-size:13px;margin-bottom:16px}.product-side-item{padding:10px;border-radius:8px;color:#64748B;font-size:12px;margin-bottom:5px}.product-side-item.active{background:#2563EB;color:#fff;font-weight:700}.product-main{padding:18px}.product-main-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.product-main-head strong{font-size:16px}.mini-btn{border:0;background:#DBEAFE;color:#1D4ED8;font-size:11px;border-radius:6px;padding:7px 9px;font-weight:700}.mini-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px}.mini-metric{background:#fff;border:1px solid #E2E8F0;border-radius:9px;padding:10px}.mini-metric small{display:block;color:#94A3B8;font-size:10px;margin-bottom:5px}.mini-metric b{font-size:16px;color:#0F172A}.mini-metric em{font-size:10px;color:#10B981;font-style:normal;margin-left:4px}.mini-timeline{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:13px}.mini-timeline-head{display:flex;justify-content:space-between;color:#64748B;font-size:10px;margin-bottom:11px}.mini-row{display:grid;grid-template-columns:66px 1fr 45px;gap:8px;align-items:center;margin:10px 0;font-size:10px;color:#475569}.mini-track{height:8px;background:#E2E8F0;border-radius:10px;overflow:hidden}.mini-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#2563EB,#7C3AED)}.mini-status{font-weight:700;text-align:right;color:#2563EB}.mini-status.done{color:#10B981}.mini-activity{margin-top:12px;background:#EFF6FF;border-radius:8px;padding:9px;color:#1D4ED8;font-size:10px}
+.showcase-strip{background:#111827;color:#fff;padding:17px 24px}.showcase-strip-inner{max-width:1080px;margin:auto;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:13px;color:#CBD5E1}.showcase-strip b{color:#fff}
+.demo-section{padding:92px 24px}.demo-section.soft{background:#F8FAFC}.demo-grid{max-width:1080px;margin:auto;display:grid;grid-template-columns:.82fr 1.18fr;gap:64px;align-items:center}.demo-grid.reverse{grid-template-columns:1.18fr .82fr}.demo-copy .demo-number{color:#2563EB;font-size:12px;font-weight:800;letter-spacing:.12em;margin-bottom:14px}.demo-copy h2{font-size:clamp(30px,4vw,46px);line-height:1.15;letter-spacing:-.05em;color:#111827;margin-bottom:17px}.demo-copy p{color:#64748B;line-height:1.8;margin-bottom:20px}.demo-points{list-style:none;margin:0;padding:0}.demo-points li{display:flex;gap:9px;align-items:flex-start;color:#475569;font-size:14px;margin:12px 0}.demo-points li:before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:#DCFCE7;color:#16A34A;font-weight:800;font-size:11px;flex:0 0 auto}.demo-card{background:#fff;border:1px solid #E2E8F0;border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,.09);overflow:hidden}.demo-card-head{padding:16px 18px;border-bottom:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center}.demo-card-head strong{font-size:15px;color:#111827}.demo-card-head span{font-size:11px;color:#10B981;font-weight:800}.demo-card-body{padding:18px}.schedule-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.schedule-toolbar b{font-size:13px}.schedule-toolbar small{color:#94A3B8}.schedule-board{display:grid;grid-template-columns:66px repeat(5,1fr);border:1px solid #E2E8F0;border-radius:10px;overflow:hidden}.schedule-board>div{min-height:42px;border-right:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;padding:7px;font-size:10px}.schedule-board .day{background:#F8FAFC;text-align:center;color:#64748B;font-weight:700;min-height:34px}.schedule-board .label{color:#64748B;background:#F8FAFC;font-weight:700}.job{border-radius:6px;padding:5px 6px!important;font-weight:700;cursor:pointer;transition:.2s;line-height:1.25}.job:hover{transform:translateY(-2px);box-shadow:0 5px 12px rgba(37,99,235,.2)}.job.blue{background:#DBEAFE;color:#1D4ED8}.job.purple{background:#EDE9FE;color:#6D28D9}.job.green{background:#DCFCE7;color:#15803D}.job.done{opacity:.55;text-decoration:line-through}.demo-actions{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}.demo-action{border:1px solid #CBD5E1;background:#fff;color:#334155;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer}.demo-action.primary{background:#2563EB;color:#fff;border-color:#2563EB}.demo-action:hover{transform:translateY(-1px)}.schedule-toast{margin-top:11px;padding:9px 11px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:11px;display:none}.schedule-toast.show{display:block}
+.expense-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}.expense-box{background:#F8FAFC;border:1px solid #E2E8F0;padding:12px;border-radius:10px}.expense-box small{display:block;color:#94A3B8;font-size:10px;margin-bottom:5px}.expense-box b{font-size:16px}.expense-box b.blue{color:#2563EB}.expense-box b.red{color:#EF4444}.expense-box b.green{color:#10B981}.expense-form{display:grid;grid-template-columns:1fr 90px 74px;gap:7px;margin-bottom:14px}.expense-form input{padding:9px 10px;border:1px solid #CBD5E1;border-radius:7px;font-size:11px;min-width:0}.expense-form button{border:0;border-radius:7px;background:#111827;color:#fff;font-size:11px;font-weight:700}.expense-list{border:1px solid #E2E8F0;border-radius:10px;overflow:hidden}.expense-item{display:grid;grid-template-columns:1fr 80px 60px;gap:8px;padding:11px 12px;border-bottom:1px solid #F1F5F9;font-size:11px;align-items:center}.expense-item:last-child{border:0}.expense-item small{color:#94A3B8}.expense-item b{text-align:right}.expense-tag{background:#FEF3C7;color:#B45309;padding:3px 6px;border-radius:5px;font-size:9px;font-weight:700;justify-self:end}.budget-line{height:9px;background:#E2E8F0;border-radius:10px;overflow:hidden;margin:12px 0 5px}.budget-line i{display:block;height:100%;width:42%;background:linear-gradient(90deg,#10B981,#F59E0B);border-radius:10px;transition:.4s}.budget-caption{display:flex;justify-content:space-between;color:#94A3B8;font-size:10px}
+.analytics-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.analytics-tabs{display:flex;gap:5px}.analytics-tab{border:1px solid #CBD5E1;background:#fff;border-radius:6px;padding:6px 8px;font-size:10px;color:#64748B;cursor:pointer}.analytics-tab.active{background:#111827;color:#fff;border-color:#111827}.chart{height:160px;display:flex;align-items:flex-end;gap:12px;padding:18px 8px 0;border-bottom:1px solid #CBD5E1;background:linear-gradient(180deg,#F8FAFC,#fff);border-radius:10px 10px 0 0}.bar-wrap{height:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}.bar-stack{height:118px;display:flex;align-items:flex-end;gap:3px}.bar{width:11px;border-radius:4px 4px 0 0;transition:.4s}.bar.revenue{background:#2563EB}.bar.cost{background:#F59E0B}.bar-label{font-size:9px;color:#94A3B8}.chart-legend{display:flex;gap:12px;margin-top:10px;color:#64748B;font-size:10px}.legend-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}.analysis-footer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}.analysis-stat{padding:10px;background:#F8FAFC;border-radius:8px}.analysis-stat small{display:block;color:#94A3B8;font-size:10px}.analysis-stat b{font-size:15px;color:#111827}.analysis-stat b.good{color:#10B981}.live-event{margin-top:13px;display:flex;align-items:center;gap:8px;background:#F0FDF4;color:#15803D;padding:9px 10px;border-radius:8px;font-size:10px}.live-event i{width:7px;height:7px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 5px rgba(34,197,94,.12)}
+.final-cta{margin:78px 24px 0;background:linear-gradient(135deg,#111827,#1E3A8A);border-radius:22px;color:#fff;padding:50px 28px;text-align:center;position:relative;overflow:hidden}.final-cta:after{content:'';position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(96,165,250,.16);right:-70px;top:-120px;filter:blur(4px)}.final-cta h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.04em;margin-bottom:12px}.final-cta p{color:#CBD5E1;margin-bottom:23px}.final-cta .cta-button{position:relative;z-index:1}
+@media(max-width:850px){.showcase-hero,.demo-grid,.demo-grid.reverse{grid-template-columns:1fr;gap:35px}.product-window{transform:none}.showcase-hero{padding-top:48px}.demo-section{padding:65px 18px}.showcase-wrap{padding:0 18px}}
+@media(max-width:560px){.product-body{grid-template-columns:1fr}.product-side{display:none}.mini-metrics,.expense-summary,.analysis-footer{grid-template-columns:1fr 1fr}.mini-metric:last-child,.analysis-stat:last-child{grid-column:span 2}.schedule-board{grid-template-columns:48px repeat(5,1fr)}.schedule-board>div{padding:5px 3px;font-size:8px}.expense-form{grid-template-columns:1fr 75px 60px}.showcase-strip-inner{font-size:11px}}
+
+.brand-lockup{display:inline-flex;align-items:center;gap:10px;color:#0F172A;text-decoration:none;font-weight:850;letter-spacing:-.04em;font-size:20px}
+.brand-mark{width:30px;height:25px;position:relative;display:inline-block}
+.brand-mark i{position:absolute;top:2px;width:5px;height:25px;border-radius:5px;background:linear-gradient(180deg,#2563EB,#7C3AED);transform-origin:center;display:block}
+.brand-mark i:first-child{left:8px;transform:rotate(-28deg)}
+.brand-mark i:last-child{right:8px;transform:rotate(28deg)}
+.brand-mark:after{content:'';position:absolute;left:12px;bottom:0;width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 0 4px rgba(16,185,129,.12)}
+.showcase-hero h2{word-break:keep-all}
+.showcase-hero h2 span{display:block;background:none;-webkit-text-fill-color:initial;color:#111827}
+.showcase-hero h2 span.accent{background:linear-gradient(135deg,#2563EB,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.product-window{transform:none;box-shadow:0 24px 60px rgba(30,64,175,.16)}
+.product-window:before{content:'';display:block;height:4px;width:52px;border-radius:10px;background:#CBD5E1;margin:0 auto 7px}
+</style>
+</head>
+<body>
+
+<nav>
+    <a class="brand-lockup" href="#"><span class="brand-mark"><i></i><i></i></span><span>공간첵첵</span></a>
+    <div>
+        <span id="user-info"></span>
+        <button id="auth-btn" onclick="goToAuth()">로그인</button>
+        <button id="logout-btn" style="display: none;" onclick="logout()">로그아웃</button>
+    </div>
+</nav>
+
+<div id="landing" class="page active">
+    <section class="showcase-hero">
+        <div>
+            <div class="showcase-kicker">인테리어 회사를 위한 실제 업무 화면</div>
+            <h2><span>현장 관리는</span><span>더 단순하게,</span><span class="accent">수익은 더 선명하게</span></h2>
+            <p>공간첵첵은 멋진 말보다, 매일 쓰게 되는 화면을 만듭니다. 아래 데모를 직접 눌러보면서 일정, 비용, 수익이 어떻게 연결되는지 확인해보세요.</p>
+            <div class="showcase-hero-actions"><button class="cta-button" onclick="goToAuth()">내 현장으로 시작하기</button><button class="cta-button secondary" onclick="document.getElementById('schedule-demo').scrollIntoView({behavior:'smooth'})">화면 먼저 둘러보기</button></div>
+            <p class="showcase-note">데모 데이터는 실제 현장 관리 흐름을 보여주기 위한 예시입니다.</p>
+        </div>
+        <div class="product-window"><div class="product-window-inner"><div class="product-topbar"><span class="product-brand">공간첵첵 / 안김디자인</span><span class="product-live">실시간 연동중</span></div><div class="product-body"><aside class="product-side"><strong>현장 관리</strong><div class="product-side-item active">전체 현장</div><div class="product-side-item">일정표</div><div class="product-side-item">지출 관리</div><div class="product-side-item">수익 분석</div></aside><main class="product-main"><div class="product-main-head"><strong>상무 푸르지오 108동</strong><button class="mini-btn">현장 열기</button></div><div class="mini-metrics"><div class="mini-metric"><small>진행률</small><b>68%</b><em>+8%</em></div><div class="mini-metric"><small>예상 이익</small><b>1,240만</b></div><div class="mini-metric"><small>오늘 일정</small><b>4건</b></div></div><div class="mini-timeline"><div class="mini-timeline-head"><span>이번 주 공정</span><span>9/20 - 9/26</span></div><div class="mini-row"><span>목공</span><div class="mini-track"><div class="mini-fill" style="width:92%"></div></div><span class="mini-status done">완료</span></div><div class="mini-row"><span>전기배선</span><div class="mini-track"><div class="mini-fill" style="width:68%"></div></div><span class="mini-status">진행중</span></div><div class="mini-row"><span>필름</span><div class="mini-track"><div class="mini-fill" style="width:34%"></div></div><span class="mini-status">예정</span></div></div><div class="mini-activity">방금 전 · 전기배선 일정이 완료 처리되었습니다</div></main></div></div></div>
+    </section>
+    <div class="showcase-strip"><div class="showcase-strip-inner"><span><b>오늘 한눈에</b> 일정 4건</span><span><b>예산 사용</b> 1,860만 / 4,500만</span><span><b>예상 마진</b> 27.4%</span><span><b>팀 공유</b> 5명 실시간</span></div></div>
+    <section id="schedule-demo" class="demo-section"><div class="demo-grid"><div class="demo-copy"><div class="demo-number">01 / SCHEDULE</div><h2>일정을 적는 게 아니라, 공정을 움직입니다</h2><p>현장별 공정이 달력 안에서 끝나지 않습니다. 담당자, 업체, 완료 상태가 한 화면에서 이어져서 오늘 무엇을 해야 하는지 바로 보입니다.</p><ul class="demo-points"><li>공정별 담당자와 업체를 한 줄에 표시</li><li>완료 처리하면 진행률과 오늘 알림이 즉시 반영</li><li>팀원이 같은 화면을 보며 현장 상황 공유</li></ul></div><div class="demo-card"><div class="demo-card-head"><strong>9월 4주차 공정 일정</strong><span>● 오늘 기준</span></div><div class="demo-card-body"><div class="schedule-toolbar"><b>상무 푸르지오 108동 303호</b><small>진행률 <strong id="demo-progress">68%</strong></small></div><div class="schedule-board"><div class="day">공정</div><div class="day">월 23</div><div class="day">화 24</div><div class="day">수 25</div><div class="day">목 26</div><div class="day">금 27</div><div class="label">목공</div><div class="job green done">가구<br>설치</div><div></div><div></div><div></div><div></div><div class="label">전기</div><div></div><div class="job blue" id="schedule-job">배선<br>작업</div><div class="job blue">스위치<br>설치</div><div></div><div></div><div class="label">필름</div><div></div><div></div><div></div><div class="job purple">필름<br>시공</div><div></div></div><div class="demo-actions"><button class="demo-action primary" id="demo-complete-task">전기배선 완료 처리</button><button class="demo-action" id="demo-add-task">내일 일정 추가</button></div><div class="schedule-toast" id="schedule-toast"></div></div></div></div></section>
+    <section class="demo-section soft"><div class="demo-grid reverse"><div class="demo-card"><div class="demo-card-head"><strong>상무 푸르지오 지출 관리</strong><span>이번 달</span></div><div class="demo-card-body"><div class="expense-summary"><div class="expense-box"><small>계약금액</small><b class="blue">4,500만</b></div><div class="expense-box"><small>현재 지출</small><b class="red" id="demo-expense-total">1,860만</b></div><div class="expense-box"><small>남은 예산</small><b class="green" id="demo-budget-left">2,640만</b></div></div><div class="expense-form"><input id="demo-expense-name" placeholder="지출 항목 예: 타일 자재"><input id="demo-expense-amount" type="number" placeholder="금액"><button id="demo-add-expense">지출 추가</button></div><div class="expense-list" id="demo-expense-list"><div class="expense-item"><span>전기 자재 선금<br><small>오늘 10:24 · 썬조명</small></span><b>320만</b><span class="expense-tag">자재</span></div><div class="expense-item"><span>목공 인건비<br><small>어제 · 영복반장</small></span><b>480만</b><span class="expense-tag">노무</span></div><div class="expense-item"><span>현장 폐기물 처리<br><small>9/21 · 처리비</small></span><b>65만</b><span class="expense-tag">외주</span></div></div><div class="budget-line"><i id="demo-budget-bar"></i></div><div class="budget-caption"><span>예산 집행률</span><b id="demo-budget-percent">41.3%</b></div></div></div><div class="demo-copy"><div class="demo-number">02 / COST</div><h2>지출을 모으는 순간, 이익이 보입니다</h2><p>영수증을 쌓아두고 월말에 계산하지 않아도 됩니다. 지출을 하나 추가하면 예산, 집행률, 남은 이익이 바로 바뀝니다.</p><ul class="demo-points"><li>자재비·노무비·외주비를 한 화면에서 구분</li><li>지출 입력 즉시 예산 집행률 자동 계산</li><li>현장별 실제 원가를 놓치지 않도록 기록</li></ul></div></div></section>
+    <section class="demo-section"><div class="demo-grid"><div class="demo-copy"><div class="demo-number">03 / INSIGHT</div><h2>숫자를 보고 다음 결정을 합니다</h2><p>예쁜 그래프를 보여주는 것이 목적이 아닙니다. 어느 현장이 돈을 벌고 있는지, 어디서 원가가 새는지 다음 행동까지 연결합니다.</p><ul class="demo-points"><li>매출·원가·예상 이익을 한눈에 비교</li><li>프로젝트를 바꿔도 분석 화면이 즉시 전환</li><li>팀 전체가 같은 숫자를 기준으로 대화</li></ul></div><div class="demo-card"><div class="demo-card-head"><strong>프로젝트 수익 분석</strong><span>실시간 업데이트</span></div><div class="demo-card-body"><div class="analytics-top"><b id="demo-analysis-title">상무 푸르지오 108동</b><div class="analytics-tabs"><button class="analytics-tab active" data-project="상무 푸르지오 108동">상무</button><button class="analytics-tab" data-project="일곡 롯데아파트">일곡</button><button class="analytics-tab" data-project="양림 힐스">양림</button></div></div><div class="chart"><div class="bar-wrap"><div class="bar-stack"><i class="bar revenue" style="height:95px"></i><i class="bar cost" style="height:48px"></i></div><span class="bar-label">7월</span></div><div class="bar-wrap"><div class="bar-stack"><i class="bar revenue" style="height:105px"></i><i class="bar cost" style="height:61px"></i></div><span class="bar-label">8월</span></div><div class="bar-wrap"><div class="bar-stack"><i class="bar revenue" style="height:88px"></i><i class="bar cost" style="height:43px"></i></div><span class="bar-label">9월</span></div><div class="bar-wrap"><div class="bar-stack"><i class="bar revenue" style="height:115px"></i><i class="bar cost" style="height:57px"></i></div><span class="bar-label">10월</span></div><div class="bar-wrap"><div class="bar-stack"><i class="bar revenue" style="height:74px"></i><i class="bar cost" style="height:39px"></i></div><span class="bar-label">11월</span></div></div><div class="chart-legend"><span><i class="legend-dot" style="background:#2563EB"></i>매출</span><span><i class="legend-dot" style="background:#F59E0B"></i>지출</span></div><div class="analysis-footer"><div class="analysis-stat"><small>계약금액</small><b id="demo-contract">4,500만</b></div><div class="analysis-stat"><small>예상 원가율</small><b id="demo-cost-rate" class="good">58.7%</b></div><div class="analysis-stat"><small>예상 이익</small><b id="demo-profit" class="good">1,240만</b></div></div><div class="live-event"><i></i><span id="demo-live-message">방금 전 지출 65만 원이 반영되었습니다</span></div></div></div></div></section>
+    <div class="showcase-wrap"><div class="final-cta"><h2>이제 설명보다 화면으로 확인하세요</h2><p>내 회사의 첫 현장을 만들고, 실제 업무 흐름을 직접 경험해보세요.</p><button class="cta-button" onclick="goToAuth()">무료로 내 현장 만들기</button></div></div>
+</div>
+
+<div id="auth" class="page">
+    <div class="form-container">
+        <h2 id="auth-title">로그인</h2>
+        <div id="auth-status"></div>
+        
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+            <div class="form-group">
+                <label>이메일</label>
+                <input type="email" id="auth-email" placeholder="you@company.com" required>
+            </div>
+            <div class="form-group">
+                <label>비밀번호</label>
+                <input type="password" id="auth-password" placeholder="최소 6자" required>
+            </div>
+            <button type="submit" id="auth-submit-btn">로그인</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1.5rem; color: var(--gray-600);">
+            <a class="link" onclick="toggleAuthMode(); return false;" href="#">
+                <span id="auth-toggle-text">계정이 없으신가요? 회원가입</span>
+            </a>
+        </p>
+    </div>
+</div>
+
+<div id="payment" class="page">
+    <div class="form-container">
+        <h2>구독 시작</h2>
+        
+        <div style="background: linear-gradient(135deg, #F0F4FF, #F8F1FF); padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+            <p style="color: var(--gray-600); margin-bottom: 0.5rem;">선택한 플랜</p>
+            <p style="font-size: 1.3rem; font-weight: 700; color: var(--gray-900);"><span id="payment-plan-name"></span></p>
+            <p style="color: var(--primary); font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem;"><span id="payment-plan-price"></span></p>
+        </div>
+        
+        <form id="payment-form" onsubmit="handlePayment(event)">
+            <div class="form-group">
+                <label>회사명</label>
+                <input type="text" id="payment-name" required>
+            </div>
+            <div class="form-group">
+                <label>담당자 이메일</label>
+                <input type="email" id="payment-email" required>
+            </div>
+            <div class="form-group">
+                <label>연락처</label>
+                <input type="tel" id="payment-phone" placeholder="010-0000-0000" required>
+            </div>
+            
+            <button type="submit">토스페이먼츠로 결제</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1.5rem;">
+            <a class="link" onclick="goToLanding(); return false;" href="#">돌아가기</a>
+        </p>
+    </div>
+</div>
+
+<div id="dashboard" class="page">
+    <div style="padding: 2rem;">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>메뉴</h3>
+                <button class="active" onclick="switchDashboardTab('overview')">📊 개요</button>
+                <button onclick="switchDashboardTab('subscription')">💳 구독</button>
+                <button onclick="switchDashboardTab('team')">👥 팀</button>
+                <button onclick="switchDashboardTab('settings')">⚙️ 설정</button>
+            </div>
+            
+            <div>
+                <div id="overview-tab">
+                    <div class="main-content">
+                        <h2>환영합니다, <span id="dashboard-user">사용자</span>님!</h2>
+                        <p style="margin-bottom: 2rem;">공간첵첵에 오신 것을 환영합니다. 이제 프로젝트 관리를 시작할 준비가 되었습니다.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #F0F4FF, #F8F1FF); padding: 2rem; border-radius: 10px; border-left: 4px solid var(--primary);">
+                            <h3 style="color: var(--gray-900); margin-bottom: 1rem;">현재 플랜</h3>
+                            <p style="font-size: 1.5rem; font-weight: 700; color: var(--primary);"><span id="dashboard-plan">Free</span> 플랜</p>
+                            <p style="color: var(--gray-600); margin-top: 0.5rem;">언제든지 업그레이드할 수 있습니다.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="subscription-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>구독 관리</h2>
+                        <p style="margin-bottom: 2rem;">현재 구독 상태를 확인하고 플랜을 변경할 수 있습니다.</p>
+                        
+                        <div style="background: white; padding: 2rem; border-radius: 10px; border: 2px solid var(--gray-200); margin-bottom: 2rem;">
+                            <p style="margin-bottom: 1rem;">
+                                <strong>현재 플랜:</strong> <span id="sub-plan" style="color: var(--primary); font-weight: 700;">Free</span>
+                            </p>
+                            <button class="cta-button" onclick="goToPayment('professional', 29000)" style="width: auto; background: linear-gradient(135deg, var(--primary), var(--accent));">플랜 업그레이드</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="team-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>팀 관리</h2>
+                        <p>프로 플랜 이상에서 팀원을 초대하고 관리할 수 있습니다.</p>
+                    </div>
+                </div>
+                
+                <div id="settings-tab" style="display: none;">
+                    <div class="main-content">
+                        <h2>계정 설정</h2>
+                        <div style="background: white; padding: 2rem; border-radius: 10px; border: 2px solid var(--gray-200);">
+                            <p style="margin-bottom: 1rem;">
+                                <strong>이메일:</strong> <span id="settings-email" style="color: var(--gray-600);">-</span>
+                            </p>
+                            <button class="cta-button" onclick="logout()" style="width: auto; background: var(--danger);">로그아웃</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 공간첵첵. 모든 권리 보유.</p>
+    <p style="margin-top: 1rem; font-size: 0.9rem;">
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">개인정보처리방침</a>
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">이용약관</a>
+        <a href="#" style="color: white; text-decoration: none; margin: 0 1rem;">문의</a>
+    </p>
+</footer>
+
+<script src="app-showcase.js?v=2"></script>
+
+</body>
+  </html>
