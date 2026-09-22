@@ -402,61 +402,154 @@ function populateProcessSelects() {
     if (site) ensureProcesses(site);
     const procs = site ? site.data.processes : DEFAULT_PROCESSES;
     const optionsHtml = '<option value="">공정 선택(선택)</option>' + procs.map(p => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>').join('');
-    ['sch-proc', 'workspace-expense-proc'].forEach(id => {
+    ['sched-ed-proc', 'workspace-expense-proc'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = optionsHtml;
     });
 }
 
-/* ------------------------ 공정 일정표 (실제 폼 기반) ------------------------ */
+/* ------------------------ 공정 일정표 — 달력 기반 (직접입력·수정·복사·드래그이동) ------------------------ */
 
-function renderScheduleFull() {
-    const wrap = document.getElementById('schedule-full-list');
+let CAL_MONTH = new Date();
+let CAL_DRAG_IDX = null;
+let SCHED_EDIT_STATE = { siteId: null, idx: null };
+
+function calMonthLabel() { return CAL_MONTH.getFullYear() + '년 ' + (CAL_MONTH.getMonth() + 1) + '월'; }
+
+function calMove(delta) {
+    CAL_MONTH.setMonth(CAL_MONTH.getMonth() + delta);
+    renderScheduleCalendar();
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function renderScheduleCalendar() {
+    const grid = document.getElementById('schedule-calendar-grid');
+    const label = document.getElementById('cal-month-label');
     const countLabel = document.getElementById('schedule-count-label');
-    if (!wrap) return;
+    if (label) label.textContent = calMonthLabel();
+    if (!grid) return;
     const site = getActiveSite();
-    if (!site) { wrap.innerHTML = '<div class="workspace-empty">현장을 먼저 만들어주세요.</div>'; if (countLabel) countLabel.textContent = '0건'; return; }
-    const schedule = (site.data.schedule || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    if (countLabel) countLabel.textContent = schedule.length + '건';
-    if (!schedule.length) { wrap.innerHTML = '<div class="workspace-empty">일정이 없어요. 위 폼에서 추가하세요.</div>'; return; }
+    if (!site) {
+        grid.innerHTML = '<div class="workspace-empty" style="grid-column:1/-1;padding:20px">현장을 먼저 만들어주세요.</div>';
+        if (countLabel) countLabel.textContent = '0건';
+        return;
+    }
     ensureProcesses(site);
-    wrap.innerHTML = schedule.map((item) => {
-        const realIdx = site.data.schedule.indexOf(item);
-        const proc = site.data.processes.find(p => p.id === item.proc);
-        return '<div class="workspace-list-row" style="grid-template-columns:8px 1fr auto auto"><i class="schedule-dot ' + (item.done ? 'green' : '') + '"></i><div><b style="' + (item.done ? 'text-decoration:line-through;color:#94A3B8' : '') + '">' + escapeHtml(item.title) + '</b><small>' + (proc ? escapeHtml(proc.name) + ' · ' : '') + escapeHtml(item.vendor || '') + '</small></div><time>' + escapeHtml(item.date || '') + '</time><div style="display:flex;gap:4px"><button class="workspace-btn" onclick="toggleScheduleDone(\'' + site.id + '\',' + realIdx + ')">' + (item.done ? '되돌리기' : '완료') + '</button><button class="workspace-btn" style="color:#EF4444" onclick="deleteScheduleItem(\'' + site.id + '\',' + realIdx + ')">삭제</button></div></div>';
-    }).join('');
+    const schedule = site.data.schedule || [];
+    if (countLabel) countLabel.textContent = schedule.length + '건';
+    const year = CAL_MONTH.getFullYear(), month = CAL_MONTH.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const byDate = {};
+    schedule.forEach((item, idx) => { const k = item.date || ''; (byDate[k] = byDate[k] || []).push(idx); });
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    let html = ['일', '월', '화', '수', '목', '금', '토'].map(d => '<div class="cal-headcell">' + d + '</div>').join('');
+    for (let i = 0; i < startWeekday; i++) html += '<div class="cal-cell cal-empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = year + '-' + pad2(month + 1) + '-' + pad2(d);
+        const idxList = byDate[dateStr] || [];
+        const chips = idxList.map(idx => calItemChip(site, idx)).join('');
+        html += '<div class="cal-cell' + (dateStr === todayStr ? ' cal-today' : '') + '" data-date="' + dateStr + '" ondragover="event.preventDefault();this.classList.add(\'cal-dragover\')" ondragleave="this.classList.remove(\'cal-dragover\')" ondrop="calDropOnDate(event,\'' + dateStr + '\')">'
+            + '<div class="cal-daynum">' + d + '</div>'
+            + '<div class="cal-items">' + chips + '</div>'
+            + '<button type="button" class="cal-add-btn" onclick="openScheduleEditor(\'' + site.id + '\',null,\'' + dateStr + '\')" title="이 날짜에 일정 추가">+</button>'
+            + '</div>';
+    }
+    grid.innerHTML = html;
 }
 
-async function addScheduleItem() {
+function calItemChip(site, idx) {
+    const item = site.data.schedule[idx];
+    const proc = site.data.processes.find(p => p.id === item.proc);
+    const label = escapeHtml(item.title) + (proc ? ' · ' + escapeHtml(proc.name) : '');
+    return '<div class="cal-chip' + (item.done ? ' cal-chip-done' : '') + '" draggable="true" ondragstart="calDragStart(event,' + idx + ')" onclick="openScheduleEditor(\'' + site.id + '\',' + idx + ')" title="' + label + '">' + label + '</div>';
+}
+
+function calDragStart(e, idx) {
+    CAL_DRAG_IDX = idx;
+    try { e.dataTransfer.setData('text/plain', String(idx)); } catch (err) {}
+}
+
+async function calDropOnDate(e, dateStr) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('cal-dragover');
     const site = getActiveSite();
-    if (!site) { alert('먼저 새 프로젝트를 만들어주세요'); return; }
-    const date = document.getElementById('sch-date').value;
-    const proc = Number(document.getElementById('sch-proc').value) || null;
-    const title = document.getElementById('sch-title').value.trim();
-    const vendor = document.getElementById('sch-vendor').value.trim();
-    if (!title) { alert('일정 제목을 입력해주세요'); return; }
+    if (!site) return;
+    let idx = CAL_DRAG_IDX;
+    if (idx === null || idx === undefined) { try { idx = Number(e.dataTransfer.getData('text/plain')); } catch (err) {} }
+    if (idx === null || idx === undefined || !site.data.schedule[idx]) return;
+    site.data.schedule[idx].date = dateStr;
+    CAL_DRAG_IDX = null;
+    await saveSite(site);
+    renderWorkspace();
+}
+
+function openScheduleEditor(siteId, idx, prefillDate) {
+    const site = STATE.sites.find(s => s.id === siteId);
+    if (!site) return;
+    ensureProcesses(site);
+    const editing = idx !== null && idx !== undefined;
+    const item = editing ? site.data.schedule[idx] : { title: '', proc: '', vendor: '', date: prefillDate || new Date().toISOString().slice(0, 10), done: false };
+    SCHED_EDIT_STATE = { siteId, idx: editing ? idx : null };
+    document.getElementById('schedule-editor-title').textContent = editing ? '일정 수정' : '일정 추가';
+    document.getElementById('sched-ed-date').value = item.date || '';
+    document.getElementById('sched-ed-proc').value = item.proc || '';
+    document.getElementById('sched-ed-title').value = item.title || '';
+    document.getElementById('sched-ed-vendor').value = item.vendor || '';
+    document.getElementById('sched-ed-done').checked = !!item.done;
+    document.getElementById('sched-ed-delete').style.display = editing ? 'inline-block' : 'none';
+    document.getElementById('sched-ed-copy').style.display = editing ? 'inline-block' : 'none';
+    const box = document.getElementById('schedule-editor-box');
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function saveScheduleEditor() {
+    const site = STATE.sites.find(s => s.id === SCHED_EDIT_STATE.siteId);
+    if (!site) return;
+    const data = {
+        title: document.getElementById('sched-ed-title').value.trim(),
+        proc: document.getElementById('sched-ed-proc').value ? Number(document.getElementById('sched-ed-proc').value) : null,
+        vendor: document.getElementById('sched-ed-vendor').value.trim(),
+        date: document.getElementById('sched-ed-date').value,
+        done: document.getElementById('sched-ed-done').checked,
+    };
+    if (!data.title) { alert('일정 제목을 입력해주세요'); return; }
     site.data.schedule = site.data.schedule || [];
-    site.data.schedule.push({ id: Date.now(), title, proc, vendor, date, done: false });
+    if (SCHED_EDIT_STATE.idx !== null && SCHED_EDIT_STATE.idx !== undefined) {
+        site.data.schedule[SCHED_EDIT_STATE.idx] = { ...site.data.schedule[SCHED_EDIT_STATE.idx], ...data };
+    } else {
+        site.data.schedule.push({ id: Date.now(), ...data });
+    }
     await saveSite(site);
-    document.getElementById('sch-title').value = '';
-    document.getElementById('sch-vendor').value = '';
+    closeScheduleEditor();
     renderWorkspace();
 }
 
-async function toggleScheduleDone(siteId, idx) {
-    const site = STATE.sites.find(s => s.id === siteId);
-    if (!site || !site.data.schedule || !site.data.schedule[idx]) return;
-    site.data.schedule[idx].done = !site.data.schedule[idx].done;
+async function deleteScheduleEditor() {
+    const site = STATE.sites.find(s => s.id === SCHED_EDIT_STATE.siteId);
+    if (!site || SCHED_EDIT_STATE.idx === null || SCHED_EDIT_STATE.idx === undefined) return;
+    site.data.schedule.splice(SCHED_EDIT_STATE.idx, 1);
     await saveSite(site);
+    closeScheduleEditor();
     renderWorkspace();
 }
 
-async function deleteScheduleItem(siteId, idx) {
-    const site = STATE.sites.find(s => s.id === siteId);
-    if (!site || !site.data.schedule) return;
-    site.data.schedule.splice(idx, 1);
-    await saveSite(site);
-    renderWorkspace();
+function copyScheduleEditor() {
+    document.getElementById('sched-ed-title').value = document.getElementById('sched-ed-title').value + ' (복사)';
+    SCHED_EDIT_STATE.idx = null;
+    document.getElementById('schedule-editor-title').textContent = '일정 추가 (복사본 — 날짜를 확인하고 저장하세요)';
+    document.getElementById('sched-ed-delete').style.display = 'none';
+    document.getElementById('sched-ed-copy').style.display = 'none';
+}
+
+function closeScheduleEditor() {
+    const box = document.getElementById('schedule-editor-box');
+    if (box) box.style.display = 'none';
+    SCHED_EDIT_STATE = { siteId: null, idx: null };
 }
 
 function renderWorkspace() {
@@ -470,7 +563,7 @@ function renderWorkspace() {
     renderProjectGrid();
     populateProcessSelects();
     renderProcessTable();
-    renderScheduleFull();
+    renderScheduleCalendar();
 }
 
 function renderKpis() {
@@ -738,11 +831,8 @@ function initWorkspace() {
     const openScheduleBtn = document.getElementById('workspace-open-schedule');
     if (openScheduleBtn) openScheduleBtn.addEventListener('click', () => {
         const card = document.getElementById('schedule-card');
-        if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); const t = document.getElementById('sch-title'); if (t) t.focus(); }
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-
-    const schSubmit = document.getElementById('sch-submit');
-    if (schSubmit) schSubmit.addEventListener('click', addScheduleItem);
 
     const copyBtn = document.getElementById('workspace-copy-info');
     if (copyBtn) copyBtn.addEventListener('click', () => {
