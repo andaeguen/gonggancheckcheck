@@ -377,9 +377,11 @@ function renderTaskList() {
 
 function renderExpenseList() {
     const wrap = document.getElementById('workspace-expense-list');
-    if (!wrap) return;
+    const label = document.getElementById('expense-total-label');
     const site = getActiveSite();
     const list = site && site.data && site.data.expenses ? site.data.expenses : [];
+    if (label) label.textContent = (site ? siteName(site) + ' 누적 ' : '누적 ') + fmtManwon(siteExpenseSum(site || {data:{}}));
+    if (!wrap) return;
     if (!list.length) { wrap.innerHTML = '<div class="workspace-empty">아직 입력된 지출이 없어요.</div>'; return; }
     wrap.innerHTML = list.slice(0, 6).map(e => `<div class="workspace-expense-row"><span>${escapeHtml(e.name)}<small>${escapeHtml(siteName(site))} · ${escapeHtml(e.date || '')}</small></span><b>${fmtManwon(e.amount)}</b><span class="workspace-expense-tag">지출</span></div>`).join('');
 }
