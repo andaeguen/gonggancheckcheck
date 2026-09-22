@@ -17,6 +17,16 @@ let STATE = {
   activeSiteId: null,
 };
 
+// 안김장부에서 검증된 14개 기본 공정 템플릿 (신규 현장 생성 시 자동으로 깔림)
+const DEFAULT_PROCESSES = [
+  { id: 1, name: '철거 공사' }, { id: 2, name: '샷시·설비 공사' }, { id: 3, name: '타일 공사' },
+  { id: 4, name: '화장실 공사' }, { id: 5, name: '목수 공사' }, { id: 6, name: '문 공사' },
+  { id: 7, name: '페인트 공사' }, { id: 8, name: '필름 공사' }, { id: 9, name: '도배 공사' },
+  { id: 10, name: '바닥(마루) 공사' }, { id: 11, name: '전기 공사' }, { id: 12, name: '가구 공사' },
+  { id: 13, name: '기타 공사' }, { id: 14, name: '공과 잡비' }
+];
+const procDetailOpen = {}; // 공정별 세부입력 펼침 상태 (siteId+procId 키)
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -270,6 +280,185 @@ async function saveSite(site) {
     return !error;
 }
 
+function ensureProcesses(site) {
+    if (!site.data) site.data = {};
+    if (!site.data.processes || !site.data.processes.length) {
+        site.data.processes = DEFAULT_PROCESSES.map(p => ({ id: p.id, name: p.name, budget: 0 }));
+    }
+    if (!site.data.processItems) site.data.processItems = {};
+    return site;
+}
+
+function procItemsOf(site, procId) {
+    return (site.data.processItems && site.data.processItems[procId]) || [];
+}
+
+function syncProcessBudget(site, procId) {
+    const items = procItemsOf(site, procId);
+    const sum = items.reduce((s, it) => s + (Number(it.amt) || 0), 0);
+    const proc = site.data.processes.find(p => p.id === procId);
+    if (proc) proc.budget = sum;
+}
+
+function procExpenseSum(site, procId) {
+    return ((site.data.expenses) || []).filter(e => e.proc === procId).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+}
+
+function fmtWon(v) {
+    return (Number(v) || 0).toLocaleString('ko-KR');
+}
+
+function renderProcessTable() {
+    const wrap = document.getElementById('process-table-body');
+    const label = document.getElementById('process-total-label');
+    if (!wrap) return;
+    const site = getActiveSite();
+    if (!site) {
+        wrap.innerHTML = '<tr><td colspan="6" class="workspace-empty" style="padding:16px">현장을 먼저 만들어주세요.</td></tr>';
+        if (label) label.textContent = '견적 0 · 지출 0';
+        return;
+    }
+    ensureProcesses(site);
+    let totalBudget = 0, totalSpent = 0;
+    const rows = site.data.processes.map(p => {
+        syncProcessBudget(site, p.id);
+        const spent = procExpenseSum(site, p.id);
+        const diff = p.budget - spent;
+        const rate = p.budget ? Math.round((p.budget - spent) / p.budget * 100) : 0;
+        totalBudget += p.budget; totalSpent += spent;
+        const open = !!procDetailOpen[site.id + '_' + p.id];
+        const items = procItemsOf(site, p.id);
+        let detailHtml = '';
+        if (open) {
+            detailHtml = '<tr><td colspan="6" style="background:#F8FAFC;padding:12px;border-bottom:1px solid #E2E8F0">'
+                + '<div style="font-size:11px;color:#94A3B8;margin-bottom:8px">' + escapeHtml(p.name) + ' 견적 세부항목 — 품명·규격·수량·단가를 넣으면 견적이 자동 계산돼요</div>'
+                + '<div style="display:grid;grid-template-columns:1.3fr 1fr 70px 70px 100px 70px auto;gap:6px;margin-bottom:8px">'
+                + '<input data-pi-name placeholder="품명" style="min-width:0;border:1px solid #CBD5E1;border-radius:6px;padding:6px;font-size:11px">'
+                + '<input data-pi-spec placeholder="규격(선택)" style="min-width:0;border:1px solid #CBD5E1;border-radius:6px;padding:6px;font-size:11px">'
+                + '<input data-pi-qty type="number" placeholder="수량" value="1" style="min-width:0;border:1px solid #CBD5E1;border-radius:6px;padding:6px;font-size:11px">'
+                + '<input data-pi-unit placeholder="단위" style="min-width:0;border:1px solid #CBD5E1;border-radius:6px;padding:6px;font-size:11px">'
+                + '<input data-pi-price type="number" placeholder="단가" style="min-width:0;border:1px solid #CBD5E1;border-radius:6px;padding:6px;font-size:11px">'
+                + '<span></span>'
+                + '<button type="button" onclick="addProcessItem(\'' + site.id + '\',' + p.id + ',this)" style="border:0;border-radius:6px;background:#0F172A;color:#fff;font-size:11px;font-weight:800;padding:6px 8px">추가</button>'
+                + '</div>'
+                + (items.length ? ('<table style="width:100%;font-size:11px;border-collapse:collapse">'
+                    + '<thead><tr style="color:#94A3B8;text-align:left"><th style="padding:4px">품명</th><th style="padding:4px">규격</th><th style="padding:4px;text-align:right">수량</th><th style="padding:4px">단위</th><th style="padding:4px;text-align:right">단가</th><th style="padding:4px;text-align:right">금액</th><th></th></tr></thead>'
+                    + '<tbody>' + items.map((it, i) => '<tr style="border-top:1px solid #E2E8F0"><td style="padding:4px">' + escapeHtml(it.name) + '</td><td style="padding:4px">' + escapeHtml(it.spec || '') + '</td><td style="padding:4px;text-align:right">' + it.qty + '</td><td style="padding:4px">' + escapeHtml(it.unit || '') + '</td><td style="padding:4px;text-align:right">' + fmtWon(it.unitPrice) + '</td><td style="padding:4px;text-align:right;font-weight:700">' + fmtWon(it.amt) + '</td><td><button onclick="deleteProcessItem(\'' + site.id + '\',' + p.id + ',' + i + ')" style="border:0;background:transparent;color:#EF4444;cursor:pointer;font-size:11px">✕</button></td></tr>').join('') + '</tbody>'
+                    + '</table>') : '<div style="color:#94A3B8;font-size:11px">아직 등록된 항목이 없어요.</div>')
+                + '</td></tr>';
+        }
+        return '<tr style="border-bottom:1px solid #F1F5F9">'
+            + '<td style="padding:8px 6px"><button type="button" onclick="toggleProcessDetail(\'' + site.id + '\',' + p.id + ')" style="border:0;background:transparent;cursor:pointer;font-weight:700;font-size:12px;color:#0F172A">' + escapeHtml(p.name) + ' ' + (open ? '▴' : '▾') + '</button></td>'
+            + '<td style="padding:8px 6px;text-align:right">' + fmtWon(p.budget) + '</td>'
+            + '<td style="padding:8px 6px;text-align:right">' + fmtWon(spent) + '</td>'
+            + '<td style="padding:8px 6px;text-align:right;color:' + (diff < 0 ? '#EF4444' : '#64748B') + '">' + fmtWon(diff) + '</td>'
+            + '<td style="padding:8px 6px;text-align:right">' + (p.budget ? rate + '%' : '-') + '</td>'
+            + '<td style="padding:8px 6px"></td>'
+            + '</tr>' + detailHtml;
+    }).join('');
+    wrap.innerHTML = rows + '<tr style="font-weight:800;border-top:2px solid #E2E8F0"><td style="padding:8px 6px">합계</td><td style="padding:8px 6px;text-align:right">' + fmtWon(totalBudget) + '</td><td style="padding:8px 6px;text-align:right">' + fmtWon(totalSpent) + '</td><td style="padding:8px 6px;text-align:right">' + fmtWon(totalBudget - totalSpent) + '</td><td colspan="2"></td></tr>';
+    if (label) label.textContent = '견적 ' + fmtManwon(totalBudget) + ' · 지출 ' + fmtManwon(totalSpent);
+}
+
+function toggleProcessDetail(siteId, procId) {
+    const key = siteId + '_' + procId;
+    procDetailOpen[key] = !procDetailOpen[key];
+    renderProcessTable();
+}
+
+async function addProcessItem(siteId, procId, btn) {
+    const site = STATE.sites.find(s => s.id === siteId);
+    if (!site) return;
+    const row = btn.closest('div');
+    const name = row.querySelector('[data-pi-name]').value.trim();
+    const spec = row.querySelector('[data-pi-spec]').value.trim();
+    const qty = Number(row.querySelector('[data-pi-qty]').value) || 1;
+    const unit = row.querySelector('[data-pi-unit]').value.trim();
+    const unitPrice = Number(row.querySelector('[data-pi-price]').value) || 0;
+    if (!name) return;
+    const amt = qty * unitPrice;
+    ensureProcesses(site);
+    if (!site.data.processItems[procId]) site.data.processItems[procId] = [];
+    site.data.processItems[procId].push({ name, spec, qty, unit, unitPrice, amt });
+    syncProcessBudget(site, procId);
+    await saveSite(site);
+    renderProcessTable();
+    renderKpis();
+    renderProjectGrid();
+}
+
+async function deleteProcessItem(siteId, procId, idx) {
+    const site = STATE.sites.find(s => s.id === siteId);
+    if (!site || !site.data.processItems || !site.data.processItems[procId]) return;
+    site.data.processItems[procId].splice(idx, 1);
+    syncProcessBudget(site, procId);
+    await saveSite(site);
+    renderProcessTable();
+    renderKpis();
+}
+
+function populateProcessSelects() {
+    const site = getActiveSite();
+    if (site) ensureProcesses(site);
+    const procs = site ? site.data.processes : DEFAULT_PROCESSES;
+    const optionsHtml = '<option value="">공정 선택(선택)</option>' + procs.map(p => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>').join('');
+    ['sch-proc', 'workspace-expense-proc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = optionsHtml;
+    });
+}
+
+/* ------------------------ 공정 일정표 (실제 폼 기반) ------------------------ */
+
+function renderScheduleFull() {
+    const wrap = document.getElementById('schedule-full-list');
+    const countLabel = document.getElementById('schedule-count-label');
+    if (!wrap) return;
+    const site = getActiveSite();
+    if (!site) { wrap.innerHTML = '<div class="workspace-empty">현장을 먼저 만들어주세요.</div>'; if (countLabel) countLabel.textContent = '0건'; return; }
+    const schedule = (site.data.schedule || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    if (countLabel) countLabel.textContent = schedule.length + '건';
+    if (!schedule.length) { wrap.innerHTML = '<div class="workspace-empty">일정이 없어요. 위 폼에서 추가하세요.</div>'; return; }
+    ensureProcesses(site);
+    wrap.innerHTML = schedule.map((item) => {
+        const realIdx = site.data.schedule.indexOf(item);
+        const proc = site.data.processes.find(p => p.id === item.proc);
+        return '<div class="workspace-list-row" style="grid-template-columns:8px 1fr auto auto"><i class="schedule-dot ' + (item.done ? 'green' : '') + '"></i><div><b style="' + (item.done ? 'text-decoration:line-through;color:#94A3B8' : '') + '">' + escapeHtml(item.title) + '</b><small>' + (proc ? escapeHtml(proc.name) + ' · ' : '') + escapeHtml(item.vendor || '') + '</small></div><time>' + escapeHtml(item.date || '') + '</time><div style="display:flex;gap:4px"><button class="workspace-btn" onclick="toggleScheduleDone(\'' + site.id + '\',' + realIdx + ')">' + (item.done ? '되돌리기' : '완료') + '</button><button class="workspace-btn" style="color:#EF4444" onclick="deleteScheduleItem(\'' + site.id + '\',' + realIdx + ')">삭제</button></div></div>';
+    }).join('');
+}
+
+async function addScheduleItem() {
+    const site = getActiveSite();
+    if (!site) { alert('먼저 새 프로젝트를 만들어주세요'); return; }
+    const date = document.getElementById('sch-date').value;
+    const proc = Number(document.getElementById('sch-proc').value) || null;
+    const title = document.getElementById('sch-title').value.trim();
+    const vendor = document.getElementById('sch-vendor').value.trim();
+    if (!title) { alert('일정 제목을 입력해주세요'); return; }
+    site.data.schedule = site.data.schedule || [];
+    site.data.schedule.push({ id: Date.now(), title, proc, vendor, date, done: false });
+    await saveSite(site);
+    document.getElementById('sch-title').value = '';
+    document.getElementById('sch-vendor').value = '';
+    renderWorkspace();
+}
+
+async function toggleScheduleDone(siteId, idx) {
+    const site = STATE.sites.find(s => s.id === siteId);
+    if (!site || !site.data.schedule || !site.data.schedule[idx]) return;
+    site.data.schedule[idx].done = !site.data.schedule[idx].done;
+    await saveSite(site);
+    renderWorkspace();
+}
+
+async function deleteScheduleItem(siteId, idx) {
+    const site = STATE.sites.find(s => s.id === siteId);
+    if (!site || !site.data.schedule) return;
+    site.data.schedule.splice(idx, 1);
+    await saveSite(site);
+    renderWorkspace();
+}
+
 function renderWorkspace() {
     renderKpis();
     renderProjectSelect();
@@ -279,6 +468,9 @@ function renderWorkspace() {
     renderExpenseList();
     renderProfitList();
     renderProjectGrid();
+    populateProcessSelects();
+    renderProcessTable();
+    renderScheduleFull();
 }
 
 function renderKpis() {
@@ -383,7 +575,11 @@ function renderExpenseList() {
     if (label) label.textContent = (site ? siteName(site) + ' 누적 ' : '누적 ') + fmtManwon(siteExpenseSum(site || {data:{}}));
     if (!wrap) return;
     if (!list.length) { wrap.innerHTML = '<div class="workspace-empty">아직 입력된 지출이 없어요.</div>'; return; }
-    wrap.innerHTML = list.slice(0, 6).map(e => `<div class="workspace-expense-row"><span>${escapeHtml(e.name)}<small>${escapeHtml(siteName(site))} · ${escapeHtml(e.date || '')}</small></span><b>${fmtManwon(e.amount)}</b><span class="workspace-expense-tag">지출</span></div>`).join('');
+    ensureProcesses(site);
+    wrap.innerHTML = list.slice(0, 6).map(e => {
+        const proc = e.proc ? site.data.processes.find(p => p.id === e.proc) : null;
+        return `<div class="workspace-expense-row"><span>${escapeHtml(e.name)}<small>${proc ? escapeHtml(proc.name) + ' · ' : ''}${escapeHtml(e.date || '')}</small></span><b>${fmtManwon(e.amount)}</b><span class="workspace-expense-tag">${proc ? '공정' : '미지정'}</span></div>`;
+    }).join('');
 }
 
 function renderProfitList() {
@@ -440,7 +636,12 @@ async function createProject() {
     if (!STATE.companyId) { if (statusEl) statusEl.textContent = '회사 정보를 불러오지 못했습니다'; return; }
 
     const id = 'site_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-    const payload = { name, customer, contract, collected: 0, progress: 0, status: '진행중', expenses: [], tasks: [], schedule: [], createdAt: new Date().toISOString() };
+    const payload = {
+      name, customer, contract, collected: 0, progress: 0, status: '진행중',
+      expenses: [], tasks: [], schedule: [], createdAt: new Date().toISOString(),
+      processes: DEFAULT_PROCESSES.map(p => ({ id: p.id, name: p.name, budget: 0 })),
+      processItems: {}
+    };
     if (statusEl) statusEl.textContent = '만드는 중...';
     const { error } = await supabaseClient.from('sites').insert({ id, company_id: STATE.companyId, data: payload, updated_at: new Date().toISOString() });
     if (error) { if (statusEl) statusEl.textContent = '실패: ' + error.message; return; }
@@ -456,16 +657,17 @@ async function addWorkspaceExpense() {
     if (!site) { alert('먼저 현장을 만들어주세요'); return; }
     const nameEl = document.getElementById('workspace-expense-name');
     const amountEl = document.getElementById('workspace-expense-amount');
+    const procEl = document.getElementById('workspace-expense-proc');
     const name = nameEl.value.trim() || '지출';
     const amount = Math.max(0, Number(amountEl.value) || 0);
+    const proc = procEl && procEl.value ? Number(procEl.value) : null;
     if (!amount) return;
     site.data = site.data || {};
     site.data.expenses = site.data.expenses || [];
-    site.data.expenses.unshift({ id: Date.now(), name, amount, date: new Date().toISOString().slice(0, 10) });
+    site.data.expenses.unshift({ id: Date.now(), name, amount, proc, date: new Date().toISOString().slice(0, 10) });
     await saveSite(site);
     nameEl.value = ''; amountEl.value = '';
     renderWorkspace();
-    renderKpis();
 }
 
 async function completeNextSchedule() {
@@ -534,7 +736,13 @@ function initWorkspace() {
     if (completeBtn) completeBtn.addEventListener('click', completeNextSchedule);
 
     const openScheduleBtn = document.getElementById('workspace-open-schedule');
-    if (openScheduleBtn) openScheduleBtn.addEventListener('click', quickAddSchedule);
+    if (openScheduleBtn) openScheduleBtn.addEventListener('click', () => {
+        const card = document.getElementById('schedule-card');
+        if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); const t = document.getElementById('sch-title'); if (t) t.focus(); }
+    });
+
+    const schSubmit = document.getElementById('sch-submit');
+    if (schSubmit) schSubmit.addEventListener('click', addScheduleItem);
 
     const copyBtn = document.getElementById('workspace-copy-info');
     if (copyBtn) copyBtn.addEventListener('click', () => {
@@ -601,6 +809,13 @@ function getSelectedAiProject() {
     const issues = [];
     if (!schedule.length) issues.push('등록된 일정이 없습니다. 공정 일정을 먼저 넣어주세요.');
     if (openTasks.length) issues.push(openTasks[0]);
+    ensureProcesses(site);
+    const overProcs = site.data.processes
+        .map(p => ({ name: p.name, budget: p.budget, spent: procExpenseSum(site, p.id) }))
+        .filter(p => p.budget > 0 && p.spent > p.budget);
+    if (overProcs.length) issues.push(overProcs.map(p => p.name + ' 공정 예산 ' + Math.round((p.spent - p.budget) / 10000) + '만원 초과').join(', '));
+    const noBudgetProcs = site.data.processes.filter(p => p.budget === 0 && procExpenseSum(site, p.id) > 0);
+    if (noBudgetProcs.length) issues.push(noBudgetProcs.map(p => p.name).join(', ') + ' 공정은 견적 없이 지출만 있어요. 견적을 먼저 넣어주세요.');
     return {
         name: siteName(site),
         data: {
