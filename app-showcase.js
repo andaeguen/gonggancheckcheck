@@ -925,6 +925,14 @@ function setAiPrompt(text) {
     if (input) input.value = text;
 }
 
+function runSiteMisunderstandingAnalysis() {
+    const site = getActiveSite();
+    const name = site ? siteName(site) : '선택된 현장';
+    switchDashboardTab('ai');
+    setAiPrompt(name + ' 현장의 오해·누락·앞뒤 불일치를 점검해줘. 견적 대비 실행비, 일정 미완료, 지출 공정 미지정, 미수금, 고객 확인사항을 장부 데이터 기준으로만 짧은 체크리스트로 정리해줘.');
+    runAiInvestigation();
+}
+
 function runAiInvestigation() {
     const prompt = (document.getElementById('ai-prompt')?.value || '현장 상태를 조사해줘').trim();
     const { name, data } = getSelectedAiProject();
@@ -962,7 +970,8 @@ function runAiInvestigation() {
             ['현장 요약', `계약 ${data.contract.toLocaleString('ko-KR')}만, 지출 ${data.expenses.toLocaleString('ko-KR')}만, 진행률 ${data.progress}%`],
             ['재무 판단', `예상 마진 ${margin.toLocaleString('ko-KR')}만 (${marginRate.toFixed(1)}%), 미수금 ${unpaid.toLocaleString('ko-KR')}만`],
             ['위험 신호', risks.join(' / ')],
-            ['권장 조치', recommendation]
+            ['권장 조치', recommendation],
+            ['오해·누락 체크', (data.issues.length ? data.issues.join(' / ') : '현재 입력된 일정·지출 기준 특이 누락 없음') + ' · 지출 공정 미지정/추가공정 사유는 담당자 확인 필요']
         ],
         approval
     };
